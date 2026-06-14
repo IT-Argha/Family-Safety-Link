@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Family Safety Link</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2917/2917995.png">
+  <meta name="theme-color" content="#0b3b5f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SafetyLink">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2917/2917995.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #f4f7fc;
+      padding: 1rem;
+      padding-bottom: 3rem;
+      color: #1e2a3a;
+    }
+    .container { max-width: 650px; margin: 0 auto; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    h1 {
+      font-size: 1.7rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #0b3b5f, #1f7a8c);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .online-badge {
+      background: #10b981;
+      color: white;
+      padding: 0.25rem 0.8rem;
+      border-radius: 40px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .offline-badge { background: #94a3b8; }
+    .card {
+      background: white;
+      border-radius: 28px;
+      padding: 1.2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+      border: 1px solid #e9eef3;
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      border-left: 4px solid #1f7a8c;
+      padding-left: 0.75rem;
+    }
+    .settings-group { margin-bottom: 1rem; }
+    label {
+      font-weight: 500;
+      font-size: 0.85rem;
+      display: block;
+      margin-bottom: 0.3rem;
+      color: #2c3e50;
+    }
+    input, button {
+      border-radius: 60px;
+      border: 1px solid #cbd5e1;
+      padding: 0.7rem 1rem;
+      font-size: 0.9rem;
+      width: 100%;
+      background: white;
+    }
+    button {
+      background: #1f7a8c;
+      color: white;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 0.3rem;
+    }
+    button:active { transform: scale(0.97); background: #0e5e6e; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #1f7a8c;
+      color: #1f7a8c;
+    }
+    .btn-danger {
+      background: #dc2626;
+    }
+    .btn-danger:active { background: #b91c1c; }
+    .btn-install {
+      background: #0b3b5f;
+      margin-top: 0;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .chat-ids { margin-top: 0.5rem; min-height: 50px; }
+    .chat-tag {
+      background: #eef2ff;
+      border-radius: 40px;
+      padding: 0.3rem 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.25rem 0.4rem;
+      font-size: 0.8rem;
+    }
+    .remove-chat {
+      background: none;
+      border: none;
+      color: #e53e3e;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0 0.2rem;
+      width: auto;
+      margin: 0;
+      font-size: 1rem;
+    }
+    .perm-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .perm-item {
+      background: #f1f5f9;
+      border-radius: 20px;
+      padding: 0.8rem 1rem;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .perm-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .perm-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .perm-buttons button {
+      width: auto;
+      margin: 0;
+      padding: 0.4rem 1rem;
+      font-size: 0.75rem;
+    }
+    .command-log {
+      background: #f8fafc;
+      border-radius: 20px;
+      padding: 0.75rem;
+      max-height: 250px;
+      overflow-y: auto;
+      font-size: 0.8rem;
+    }
+    .log-entry { border-bottom: 1px solid #e2e8f0; padding: 0.5rem 0; word-break: break-word; }
+    .log-entry.cmd { color: #1f7a8c; font-weight: 500; }
+    .log-entry.success { color: #10b981; }
+    .log-entry.warn { color: #f59e0b; }
+    .log-entry.error { color: #ef4444; }
+    .recording-ui {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: #1e293b;
+      color: white;
+      padding: 1rem;
+      border-radius: 40px;
+      text-align: center;
+      z-index: 1000;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .button-group button { flex: 1; margin-top: 0; }
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    .status-granted { background: #10b98120; color: #10b981; }
+    .status-denied { background: #ef444420; color: #ef4444; }
+    .info-text {
+      font-size: 0.7rem;
+      color: #6b7280;
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+    .install-banner {
+      background: linear-gradient(135deg, #0b3b5f, #1f7a8c);
+      color: white;
+      padding: 1rem;
+      border-radius: 20px;
+      margin-bottom: 1rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .install-banner button {
+      width: auto;
+      background: white;
+      color: #0b3b5f;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div id="installBanner" class="install-banner">
+    <span>📱 Install Family Safety Link as App</span>
+    <button id="installBtn">Install</button>
+  </div>
+  
+  <div class="header">
+    <h1>👨‍👩‍👧 Family Safety Link</h1>
+    <div id="onlineIndicator" class="online-badge">● ONLINE</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚙️ Bot Settings</div>
+    <div class="settings-group">
+      <label>🤖 Telegram Bot Token</label>
+      <input type="text" id="botToken" placeholder="1234567890:ABCdefGHIJKLMNOPQRSTUVWXYZ">
+      <div class="status-text" id="connStatus" style="font-size:0.75rem; margin-top:0.3rem;">Not configured</div>
+    </div>
+    
+    <div class="settings-group">
+      <label>👥 Authorized Users (Chat IDs)</label>
+      <div class="flex-between">
+        <input type="text" id="newChatId" placeholder="e.g., 1863260528" style="flex:1">
+        <button id="addChatIdBtn" style="width: auto; background:#10b981;">+ Add User</button>
+      </div>
+      <div id="chatIdsList" class="chat-ids"></div>
+      <div class="button-group">
+        <button id="getChatIdBtn" class="btn-outline">🔍 Auto-detect My Chat ID</button>
+        <button id="testBotBtn" class="btn-outline">📨 Test Bot</button>
+      </div>
+    </div>
+    
+    <button id="saveSettingsBtn" style="background:#1f7a8c;">💾 Save All Settings</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔐 Device Permissions</div>
+    <div class="perm-grid">
+      <div class="perm-item">
+        <div class="perm-info">
+          <span>📍 Location</span>
+          <span id="locPerm" class="status-badge status-denied">Not Granted</span>
+        </div>
+        <div class="perm-buttons">
+          <button id="grantLocBtn" class="btn-outline">Grant</button>
+          <button id="revokeLocBtn" class="btn-danger">Remove</button>
+        </div>
+      </div>
+      
+      <div class="perm-item">
+        <div class="perm-info">
+          <span>📷 Camera</span>
+          <span id="camPerm" class="status-badge status-denied">Not Granted</span>
+        </div>
+        <div class="perm-buttons">
+          <button id="grantCamBtn" class="btn-outline">Grant</button>
+          <button id="revokeCamBtn" class="btn-danger">Remove</button>
+        </div>
+      </div>
+      
+      <div class="perm-item">
+        <div class="perm-info">
+          <span>🎙️ Microphone</span>
+          <span id="micPerm" class="status-badge status-denied">Not Granted</span>
+        </div>
+        <div class="perm-buttons">
+          <button id="grantMicBtn" class="btn-outline">Grant</button>
+          <button id="revokeMicBtn" class="btn-danger">Remove</button>
+        </div>
+      </div>
+    </div>
+    <div class="info-text">
+      💡 Click "Grant" once - permission saved forever. No annoying popups on refresh!
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Dashboard</div>
+    <div style="display: grid; gap: 0.5rem;">
+      <div><strong>📨 Last command:</strong> <span id="lastCommand">—</span></div>
+      <div><strong>📤 Last response:</strong> <span id="lastResponse">—</span></div>
+      <div><strong>👥 Authorized count:</strong> <span id="authCount">0</span></div>
+      <div><strong>✅ Permissions:</strong> <span id="permSummary">None</span></div>
+      <div><strong>📱 PWA Status:</strong> <span id="pwaStatus">Checking...</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📜 Command History</div>
+    <div id="commandLog" class="command-log">✨ Ready. Grant permissions once, they persist forever!</div>
+    <button id="clearHistoryBtn" class="btn-outline" style="margin-top: 0.6rem;">Clear History</button>
+  </div>
+</div>
+
+<script>
+  // ========== GLOBAL STATE ==========
+  let settings = { botToken: '', authorizedChatIds: [] };
+  let permissions = { location: false, camera: false, microphone: false };
+  let lastUpdateSeq = 0;
+  let commandHistory = [];
+  let pollingInterval = null;
+  let isPolling = false;
+  let processedUpdateIds = new Set();
+  let requestQueue = [];
+  let isProcessingQueue = false;
+  let deferredPrompt = null;
+
+  // DOM Elements
+  const botTokenInput = document.getElementById('botToken');
+  const newChatIdInput = document.getElementById('newChatId');
+  const addChatIdBtn = document.getElementById('addChatIdBtn');
+  const chatIdsListDiv = document.getElementById('chatIdsList');
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  const connStatusSpan = document.getElementById('connStatus');
+  const onlineIndicator = document.getElementById('onlineIndicator');
+  const lastCommandSpan = document.getElementById('lastCommand');
+  const lastResponseSpan = document.getElementById('lastResponse');
+  const authCountSpan = document.getElementById('authCount');
+  const commandLogDiv = document.getElementById('commandLog');
+  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+  const displayChatIdSpan = document.getElementById('displayChatId');
+  const getChatIdBtn = document.getElementById('getChatIdBtn');
+  const testBotBtn = document.getElementById('testBotBtn');
+  const permSummarySpan = document.getElementById('permSummary');
+  const installBanner = document.getElementById('installBanner');
+  const installBtn = document.getElementById('installBtn');
+  const pwaStatusSpan = document.getElementById('pwaStatus');
+
+  // ========== SILENT PERMISSION CHECKS ==========
+  async function checkLocationSilent() {
+    if (!navigator.permissions) {
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(() => resolve(true), () => resolve(false), { timeout: 100 });
+      });
+    }
+    try {
+      const result = await navigator.permissions.query({ name: 'geolocation' });
+      return result.state === 'granted';
+    } catch(e) { return false; }
+  }
+  
+  async function checkCameraSilent() {
+    if (!navigator.mediaDevices) return false;
+    try {
+      if (navigator.permissions) {
+        const result = await navigator.permissions.query({ name: 'camera' }).catch(() => null);
+        if (result?.state === 'granted') return true;
+      }
+      const stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({ video: true }),
+        new Promise((_, reject) => setTimeout(() => reject('timeout'), 200))
+      ]).catch(() => null);
+      if (stream) { stream.getTracks().forEach(t => t.stop()); return true; }
+      return false;
+    } catch(e) { return false; }
+  }
+  
+  async function checkMicrophoneSilent() {
+    if (!navigator.mediaDevices) return false;
+    try {
+      if (navigator.permissions) {
+        const result = await navigator.permissions.query({ name: 'microphone' }).catch(() => null);
+        if (result?.state === 'granted') return true;
+      }
+      const stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({ audio: true }),
+        new Promise((_, reject) => setTimeout(() => reject('timeout'), 200))
+      ]).catch(() => null);
+      if (stream) { stream.getTracks().forEach(t => t.stop()); return true; }
+      return false;
+    } catch(e) { return false; }
+  }
+  
+  function savePermissions() {
+    localStorage.setItem('familySafetyPermissions', JSON.stringify(permissions));
+  }
+  
+  function loadPermissions() {
+    const saved = localStorage.getItem('familySafetyPermissions');
+    if (saved) {
+      try {
+        const p = JSON.parse(saved);
+        permissions.location = p.location === true;
+        permissions.camera = p.camera === true;
+        permissions.microphone = p.microphone === true;
+      } catch(e) {}
+    }
+  }
+  
+  async function verifyPermissions() {
+    const [loc, cam, mic] = await Promise.all([checkLocationSilent(), checkCameraSilent(), checkMicrophoneSilent()]);
+    permissions.location = loc;
+    permissions.camera = cam;
+    permissions.microphone = mic;
+    savePermissions();
+    updatePermissionUI();
+  }
+  
+  function updatePermissionUI() {
+    document.getElementById('locPerm').innerText = permissions.location ? 'Granted ✓' : 'Not Granted';
+    document.getElementById('locPerm').className = permissions.location ? 'status-badge status-granted' : 'status-badge status-denied';
+    document.getElementById('camPerm').innerText = permissions.camera ? 'Granted ✓' : 'Not Granted';
+    document.getElementById('camPerm').className = permissions.camera ? 'status-badge status-granted' : 'status-badge status-denied';
+    document.getElementById('micPerm').innerText = permissions.microphone ? 'Granted ✓' : 'Not Granted';
+    document.getElementById('micPerm').className = permissions.microphone ? 'status-badge status-granted' : 'status-badge status-denied';
+    
+    const list = [];
+    if (permissions.location) list.push('📍 Location');
+    if (permissions.camera) list.push('📷 Camera');
+    if (permissions.microphone) list.push('🎙️ Mic');
+    permSummarySpan.innerText = list.length ? list.join(', ') : 'None granted';
+  }
+
+  // ========== GRANT/REVOKE ==========
+  async function grantLocation() {
+    try {
+      await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject));
+      permissions.location = true;
+      savePermissions();
+      updatePermissionUI();
+      addLog('✅ Location access granted', 'success');
+    } catch(e) {
+      permissions.location = false;
+      savePermissions();
+      updatePermissionUI();
+      addLog('❌ Location access denied', 'error');
+    }
+  }
+  
+  async function grantCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      permissions.camera = true;
+      savePermissions();
+      updatePermissionUI();
+      addLog('✅ Camera access granted', 'success');
+    } catch(e) {
+      permissions.camera = false;
+      savePermissions();
+      updatePermissionUI();
+      addLog('❌ Camera access denied', 'error');
+    }
+  }
+  
+  async function grantMicrophone() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      permissions.microphone = true;
+      savePermissions();
+      updatePermissionUI();
+      addLog('✅ Microphone access granted', 'success');
+    } catch(e) {
+      permissions.microphone = false;
+      savePermissions();
+      updatePermissionUI();
+      addLog('❌ Microphone access denied', 'error');
+    }
+  }
+  
+  function revokeLocation() { permissions.location = false; savePermissions(); updatePermissionUI(); addLog('📍 Location access removed', 'warn'); }
+  function revokeCamera() { permissions.camera = false; savePermissions(); updatePermissionUI(); addLog('📷 Camera access removed', 'warn'); }
+  function revokeMicrophone() { permissions.microphone = false; savePermissions(); updatePermissionUI(); addLog('🎙️ Microphone access removed', 'warn'); }
+
+  // ========== HELPER FUNCTIONS ==========
+  function addLog(message, type = 'info') {
+    const time = new Date().toLocaleTimeString();
+    commandHistory.unshift({ time, text: message, type });
+    if (commandHistory.length > 100) commandHistory.pop();
+    commandLogDiv.innerHTML = commandHistory.map(e => `<div class="log-entry ${e.type}">[${e.time}] ${e.text}</div>`).join('');
+    if (commandHistory.length === 0) commandLogDiv.innerHTML = '✨ No logs yet.';
+  }
+
+  function renderChatIds() {
+    if (settings.authorizedChatIds.length === 0) {
+      chatIdsListDiv.innerHTML = '<div style="color:#94a3b8; font-size:0.75rem; padding:0.5rem;">No authorized users yet.</div>';
+      return;
+    }
+    chatIdsListDiv.innerHTML = settings.authorizedChatIds.map(id => `<div class="chat-tag">👤 ${id}<button class="remove-chat" data-id="${id}">✖</button></div>`).join('');
+    document.querySelectorAll('.remove-chat').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        settings.authorizedChatIds = settings.authorizedChatIds.filter(cid => String(cid) !== String(id));
+        persistSettings();
+        addLog(`❌ Removed chat ID ${id}`, 'warn');
+        authCountSpan.innerText = settings.authorizedChatIds.length;
+      });
+    });
+  }
+
+  function persistSettings() {
+    localStorage.setItem('familySafetySettings', JSON.stringify({ botToken: settings.botToken, authorizedChatIds: settings.authorizedChatIds }));
+    connStatusSpan.innerHTML = settings.botToken?.length > 20 ? '✅ Bot token configured' : '⚠️ Enter bot token';
+    renderChatIds();
+    authCountSpan.innerText = settings.authorizedChatIds.length;
+    if (settings.botToken?.length > 20) startPolling();
+  }
+
+  function loadSettings() {
+    const saved = localStorage.getItem('familySafetySettings');
+    if (saved) {
+      try {
+        const s = JSON.parse(saved);
+        settings.botToken = s.botToken || '';
+        settings.authorizedChatIds = (s.authorizedChatIds || []).map(id => String(id));
+      } catch(e) {}
+    }
+    botTokenInput.value = settings.botToken;
+    renderChatIds();
+    authCountSpan.innerText = settings.authorizedChatIds.length;
+    connStatusSpan.innerHTML = settings.botToken?.length > 20 ? '✅ Bot token configured' : '⚠️ Enter bot token';
+    if (settings.botToken?.length > 20) startPolling();
+  }
+
+  // ========== TELEGRAM API ==========
+  async function sendMessage(chatId, text, markdown = false) {
+    if (!settings.botToken) return false;
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true, parse_mode: markdown ? 'Markdown' : undefined })
+      });
+      return res.ok;
+    } catch(e) { return false; }
+  }
+
+  async function sendPhoto(chatId, base64) {
+    const byteString = atob(base64.split(',')[1]);
+    const mime = base64.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    const blob = new Blob([ab], { type: mime });
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('photo', blob, 'photo.jpg');
+    const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendPhoto`, { method: 'POST', body: fd });
+    return res.ok;
+  }
+
+  async function sendVideo(chatId, base64) {
+    const byteString = atob(base64.split(',')[1]);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    const blob = new Blob([ab], { type: 'video/mp4' });
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('video', blob, 'video.mp4');
+    const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendVideo`, { method: 'POST', body: fd });
+    return res.ok;
+  }
+
+  async function sendAudio(chatId, base64) {
+    const byteString = atob(base64.split(',')[1]);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    const blob = new Blob([ab], { type: 'audio/webm' });
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('audio', blob, 'audio.ogg');
+    const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendAudio`, { method: 'POST', body: fd });
+    return res.ok;
+  }
+
+  // ========== COMMAND HANDLERS ==========
+  async function handleLocation(chatId) {
+    if (!permissions.location) { await sendMessage(chatId, "❌ Location permission not granted. Grant in app.", true); return; }
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        await sendMessage(chatId, `📍 *Location*\nhttps://www.google.com/maps?q=${latitude},${longitude}\n\n${latitude}, ${longitude}`, true);
+        lastResponseSpan.innerText = `Location sent`;
+        resolve(true);
+      }, async () => { await sendMessage(chatId, "❌ Cannot get location", true); resolve(false); });
+    });
+  }
+
+  async function handlePhoto(chatId) {
+    if (!permissions.camera) { await sendMessage(chatId, "❌ Camera permission not granted", true); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      await video.play();
+      await new Promise(r => setTimeout(r, 100));
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const data = canvas.toDataURL('image/jpeg', 0.9);
+      stream.getTracks().forEach(t => t.stop());
+      video.remove();
+      await sendPhoto(chatId, data);
+      lastResponseSpan.innerText = `Photo sent`;
+      addLog(`📷 Photo sent`, 'success');
+    } catch(e) { await sendMessage(chatId, "❌ Failed to capture photo", true); }
+  }
+
+  async function handleAudio(chatId) {
+    if (!permissions.microphone) { await sendMessage(chatId, "❌ Microphone permission not granted", true); return; }
+    await sendMessage(chatId, "🎤 Recording audio... (60s max)", true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      let chunks = [];
+      recorder.ondataavailable = e => chunks.push(e.data);
+      
+      const div = document.createElement('div');
+      div.className = 'recording-ui';
+      div.innerHTML = `<span>🔴 Recording audio...</span><button id="stopAudioBtn" style="background:#dc2626;">Stop</button>`;
+      document.body.appendChild(div);
+      
+      const result = await new Promise((resolve) => {
+        const timeout = setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 60000);
+        recorder.onstop = async () => {
+          clearTimeout(timeout);
+          div.remove();
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = async () => resolve(await sendAudio(chatId, reader.result));
+          reader.readAsDataURL(blob);
+        };
+        recorder.start(1000);
+        document.getElementById('stopAudioBtn').onclick = () => { if (recorder.state === 'recording') recorder.stop(); };
+      });
+      if (result) { lastResponseSpan.innerText = `Audio sent`; addLog(`🎤 Audio sent`, 'success'); }
+    } catch(e) { await sendMessage(chatId, "❌ Failed to record audio", true); }
+  }
+
+  async function handleVideo(chatId) {
+    if (!permissions.camera || !permissions.microphone) { await sendMessage(chatId, "❌ Camera + Microphone required", true); return; }
+    await sendMessage(chatId, "🎥 Recording video... (60s max)", true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const recorder = new MediaRecorder(stream);
+      let chunks = [];
+      recorder.ondataavailable = e => chunks.push(e.data);
+      
+      const div = document.createElement('div');
+      div.className = 'recording-ui';
+      div.innerHTML = `<span>🔴 Recording video...</span><button id="stopVideoBtn" style="background:#dc2626;">Stop</button>`;
+      document.body.appendChild(div);
+      
+      const result = await new Promise((resolve) => {
+        const timeout = setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 60000);
+        recorder.onstop = async () => {
+          clearTimeout(timeout);
+          div.remove();
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(chunks, { type: 'video/mp4' });
+          const reader = new FileReader();
+          reader.onloadend = async () => resolve(await sendVideo(chatId, reader.result));
+          reader.readAsDataURL(blob);
+        };
+        recorder.start(1000);
+        document.getElementById('stopVideoBtn').onclick = () => { if (recorder.state === 'recording') recorder.stop(); };
+      });
+      if (result) { lastResponseSpan.innerText = `Video sent`; addLog(`🎥 Video sent`, 'success'); }
+    } catch(e) { await sendMessage(chatId, "❌ Failed to record video", true); }
+  }
+
+  async function processCommand(cmd, chatId) {
+    lastCommandSpan.innerText = cmd;
+    const c = cmd.trim().toLowerCase();
+    if (c === 'location') await handleLocation(chatId);
+    else if (c === 'photo') await handlePhoto(chatId);
+    else if (c === 'audio') await handleAudio(chatId);
+    else if (c === 'video') await handleVideo(chatId);
+    else if (c.startsWith('message')) {
+      const msg = cmd.replace(/^message\s*/i, '').trim() || 'Check app!';
+      const reply = prompt(`📨 Message from ${chatId}:\n"${msg}"\n\nReply:`);
+      if (reply?.trim()) await sendMessage(chatId, `📝 Reply: ${reply}`, true);
+    } else {
+      await sendMessage(chatId, "📱 Commands: location, photo, audio, video, message <text>", true);
+    }
+  }
+
+  // ========== POLLING ==========
+  async function pollUpdates() {
+    if (!settings.botToken || isPolling) return;
+    isPolling = true;
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/getUpdates?offset=${lastUpdateSeq}&timeout=15`);
+      const data = await res.json();
+      if (data.ok && data.result) {
+        for (const update of data.result) {
+          if (update.update_id > lastUpdateSeq) lastUpdateSeq = update.update_id;
+          const msg = update.message;
+          if (msg?.text && msg?.chat) {
+            const chatId = String(msg.chat.id);
+            if (settings.authorizedChatIds.some(id => String(id) === chatId)) {
+              if (!processedUpdateIds.has(update.update_id)) {
+                processedUpdateIds.add(update.update_id);
+                addLog(`📨 Command from ${chatId}: "${msg.text}"`, 'cmd');
+                await processCommand(msg.text, chatId);
+              }
+            } else {
+              await sendMessage(chatId, `🔒 *Access Denied*\n\nYour Chat ID: \`${chatId}\``, true);
+            }
+          }
+        }
+      }
+      onlineIndicator.className = 'online-badge';
+      onlineIndicator.innerText = '● ONLINE';
+    } catch(e) {
+      onlineIndicator.className = 'online-badge offline-badge';
+      onlineIndicator.innerText = '○ OFFLINE';
+    } finally { isPolling = false; }
+  }
+
+  function startPolling() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    pollingInterval = setInterval(pollUpdates, 30000);
+    pollUpdates();
+  }
+
+  // ========== AUTO-DETECT CHAT ID ==========
+  async function autoDetect() {
+    if (!settings.botToken) { alert('Set bot token first'); return; }
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/getUpdates`);
+      const data = await res.json();
+      if (data.ok && data.result?.length) {
+        for (const update of data.result.reverse()) {
+          if (update.message?.chat) {
+            const chatId = String(update.message.chat.id);
+            const name = update.message.from?.first_name || 'User';
+            displayChatIdSpan.innerText = chatId;
+            if (confirm(`Found: ${name}\nChat ID: ${chatId}\n\nAdd to authorized?`)) {
+              if (!settings.authorizedChatIds.includes(chatId)) {
+                settings.authorizedChatIds.push(chatId);
+                persistSettings();
+                addLog(`✅ Added ${name} (${chatId})`, 'success');
+                await sendMessage(chatId, "✅ *Authorized!* Send commands: location, photo, audio, video", true);
+              }
+            }
+            return;
+          }
+        }
+      }
+      alert('Send a message to your bot first!');
+    } catch(e) { alert('Error fetching updates'); }
+  }
+
+  async function testBot() {
+    if (!settings.botToken) { alert('Set bot token first'); return; }
+    if (!settings.authorizedChatIds.length) { alert('Add a chat ID first'); return; }
+    const ok = await sendMessage(settings.authorizedChatIds[0], "✅ *Bot is working!* 🎉\n\nCommands: location, photo, audio, video, message", true);
+    if (ok) addLog('✅ Test sent!', 'success');
+    else alert('Failed to send');
+  }
+
+  // ========== PWA INSTALLATION ==========
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    pwaStatusSpan.innerText = '✅ Installed as App';
+    pwaStatusSpan.style.color = '#10b981';
+  } else if (window.navigator.standalone === true) {
+    pwaStatusSpan.innerText = '✅ Installed (iOS)';
+    pwaStatusSpan.style.color = '#10b981';
+  } else {
+    pwaStatusSpan.innerText = 'Not installed';
+    pwaStatusSpan.style.color = '#f59e0b';
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBanner.style.display = 'flex';
+    pwaStatusSpan.innerText = 'Ready to install';
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      pwaStatusSpan.innerText = '✅ Installed!';
+      installBanner.style.display = 'none';
+    }
+    deferredPrompt = null;
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js').then(reg => {
+      console.log('SW registered');
+      addLog('✅ PWA Service Worker installed', 'success');
+    }).catch(err => addLog('⚠️ Service Worker failed', 'warn'));
+  }
+
+  // ========== INITIALIZATION ==========
+  document.getElementById('grantLocBtn').onclick = grantLocation;
+  document.getElementById('grantCamBtn').onclick = grantCamera;
+  document.getElementById('grantMicBtn').onclick = grantMicrophone;
+  document.getElementById('revokeLocBtn').onclick = revokeLocation;
+  document.getElementById('revokeCamBtn').onclick = revokeCamera;
+  document.getElementById('revokeMicBtn').onclick = revokeMicrophone;
+  
+  saveSettingsBtn.onclick = () => {
+    settings.botToken = botTokenInput.value.trim();
+    persistSettings();
+    addLog('⚙️ Settings saved', 'success');
+  };
+  
+  addChatIdBtn.onclick = () => {
+    const newId = newChatIdInput.value.trim();
+    if (newId && !settings.authorizedChatIds.includes(newId)) {
+      settings.authorizedChatIds.push(newId);
+      persistSettings();
+      newChatIdInput.value = '';
+      addLog(`➕ Added ${newId}`, 'success');
+      sendMessage(newId, "✅ *Authorized!* 🎉", true);
+    }
+  };
+  
+  getChatIdBtn.onclick = autoDetect;
+  testBotBtn.onclick = testBot;
+  clearHistoryBtn.onclick = () => { commandHistory = []; addLog('History cleared', 'info'); };
+
+  if ('Notification' in window) Notification.requestPermission();
+
+  loadPermissions();
+  loadSettings();
+  verifyPermissions().then(() => addLog('🚀 App ready! Grant permissions once, they persist forever.', 'success'));
+</script>
+</body>
+</html>
