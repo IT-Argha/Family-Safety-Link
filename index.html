@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Family Safety Link - Working Version</title>
+  <title>Family Safety Link - Fully Working</title>
   <link rel="manifest" href="data:application/manifest+json,{">
   <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2917/2917995.png">
   <meta name="theme-color" content="#0b3b5f">
@@ -68,7 +68,7 @@
       margin-bottom: 0.3rem;
       color: #2c3e50;
     }
-    input, button {
+    input, button, select {
       border-radius: 60px;
       border: 1px solid #cbd5e1;
       padding: 0.7rem 1rem;
@@ -85,17 +85,16 @@
       transition: 0.2s;
       margin-top: 0.3rem;
     }
-    button:active { transform: scale(0.97); background: #0e5e6e; }
+    button:hover { opacity: 0.9; }
+    button:active { transform: scale(0.98); }
     .btn-outline {
       background: transparent;
       border: 1px solid #1f7a8c;
       color: #1f7a8c;
     }
-    .btn-outline:active { background: #1f7a8c10; }
     .btn-danger {
       background: #dc2626;
     }
-    .btn-danger:active { background: #b91c1c; }
     .btn-success {
       background: #10b981;
     }
@@ -264,51 +263,22 @@
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    select { width: auto; }
   </style>
-  <script>
-    // Service Worker Registration
-    (function() {
-      const manifestData = {
-        name: "Family Safety Link",
-        short_name: "SafetyLink",
-        description: "Control your device via Telegram bot",
-        start_url: "/",
-        display: "standalone",
-        theme_color: "#0b3b5f",
-        background_color: "#f4f7fc",
-        orientation: "portrait",
-        icons: [
-          { src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png", sizes: "512x512", type: "image/png" },
-          { src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png", sizes: "192x192", type: "image/png" }
-        ]
-      };
-      
-      const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-      const manifestLink = document.createElement('link');
-      manifestLink.rel = 'manifest';
-      manifestLink.href = URL.createObjectURL(manifestBlob);
-      document.head.appendChild(manifestLink);
-      
-      const swCode = `const CACHE_NAME='fsl-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(['/'])).then(()=>self.skipWaiting())));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
-      const swBlob = new Blob([swCode], { type: 'application/javascript' });
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register(URL.createObjectURL(swBlob)));
-      }
-    })();
-  </script>
 </head>
 <body>
 <div class="container">
-  <div id="installBanner" class="install-banner">
-    <span>📱 Install Family Safety Link</span>
-    <button id="installBtn">Install</button>
+  <div id="installBanner" class="install-banner" style="display: none;">
+    <span>📱 Install Family Safety Link as App</span>
+    <button id="installBtn">Install Now</button>
   </div>
   
   <div class="header">
     <h1>👨‍👩‍👧 Family Safety Link</h1>
-    <div id="onlineIndicator" class="online-badge">● ONLINE</div>
+    <div id="onlineIndicator" class="online-badge">● ONLINE <span class="polling-indicator"></span></div>
   </div>
 
+  <!-- Bot Settings Card -->
   <div class="card">
     <div class="card-title">⚙️ Bot Settings</div>
     <div class="settings-group">
@@ -318,9 +288,9 @@
     </div>
     
     <div class="settings-group">
-      <label>👥 Authorized Users</label>
+      <label>👥 Authorized Users (Chat IDs)</label>
       <div class="flex-between">
-        <input type="text" id="newChatId" placeholder="Chat ID" style="flex:1">
+        <input type="text" id="newChatId" placeholder="Enter Chat ID" style="flex:1">
         <button id="addChatIdBtn" style="width: auto; background:#10b981;">+ Add</button>
       </div>
       <div id="chatIdsList" class="chat-ids"></div>
@@ -330,23 +300,22 @@
       </div>
     </div>
     
-    <div class="flex-between">
-      <label>⚡ Polling Speed</label>
-      <select id="pollingInterval" style="width: auto; padding: 0.4rem 0.8rem;">
-        <option value="3">3 sec (Fast)</option>
-        <option value="5">5 sec</option>
-        <option value="10">10 sec</option>
-        <option value="30">30 sec</option>
+    <div class="flex-between" style="margin-bottom: 0.5rem;">
+      <label>⚡ Polling Interval</label>
+      <select id="pollingIntervalSelect">
+        <option value="3">3 seconds (Fast)</option>
+        <option value="5">5 seconds</option>
+        <option value="10">10 seconds</option>
+        <option value="30">30 seconds</option>
       </select>
     </div>
     
-    <div class="button-group">
-      <button id="saveSettingsBtn">💾 Save Settings</button>
-    </div>
+    <button id="saveSettingsBtn">💾 Save All Settings</button>
   </div>
 
+  <!-- Permissions Card -->
   <div class="card">
-    <div class="card-title">🔐 Permissions (Grant Once)</div>
+    <div class="card-title">🔐 Device Permissions</div>
     <div class="perm-grid">
       <div class="perm-item">
         <div class="perm-info">📍 Location</div>
@@ -370,57 +339,71 @@
         </div>
       </div>
     </div>
-    <div class="info-text">⚠️ Click Grant for each permission. You only need to do this once!</div>
+    <div class="info-text">⚠️ Click "Grant" for each permission. You only need to do this once!</div>
   </div>
 
+  <!-- Dashboard Card -->
   <div class="card">
     <div class="card-title">📊 Dashboard</div>
     <div style="display: grid; gap: 0.5rem;">
       <div><strong>📨 Last command:</strong> <span id="lastCommand">—</span></div>
       <div><strong>👤 From:</strong> <span id="lastUser">—</span></div>
-      <div><strong>📤 Response:</strong> <span id="lastResponse">—</span></div>
-      <div><strong>👥 Authorized:</strong> <span id="authCount">0</span></div>
+      <div><strong>📤 Last response:</strong> <span id="lastResponse">—</span></div>
+      <div><strong>👥 Authorized users:</strong> <span id="authCount">0</span></div>
+      <div><strong>✅ Permissions:</strong> <span id="permSummary">None</span></div>
     </div>
   </div>
 
+  <!-- History Card -->
   <div class="card">
     <div class="card-title">📜 Command History</div>
-    <div id="commandLog" class="command-log">✨ Ready. Grant permissions first!</div>
-    <button id="clearHistoryBtn" class="btn-outline" style="margin-top: 0.6rem;">Clear</button>
+    <div id="commandLog" class="command-log">✨ Ready. Grant permissions and configure bot to start!</div>
+    <button id="clearHistoryBtn" class="btn-outline" style="margin-top: 0.6rem;">Clear History</button>
   </div>
 </div>
 
 <script>
-  // ========== STATE ==========
-  let settings = { botToken: '', authorizedChatIds: [], pollingSec: 3 };
-  let permissions = { location: false, camera: false, microphone: false };
+  // ========== STATE MANAGEMENT ==========
+  let settings = {
+    botToken: '',
+    authorizedChatIds: [],
+    pollingIntervalSec: 3
+  };
+  
+  let permissions = {
+    location: false,
+    camera: false,
+    microphone: false
+  };
+  
   let lastUpdateId = 0;
-  let history = [];
-  let pollInterval = null;
+  let commandHistory = [];
+  let pollingInterval = null;
   let isPolling = false;
-  let processedIds = new Set();
-  let installPrompt = null;
+  let processedUpdateIds = new Set();
+  let deferredPrompt = null;
 
-  // DOM elements
+  // DOM Elements
   const botTokenInput = document.getElementById('botToken');
   const newChatIdInput = document.getElementById('newChatId');
   const addChatIdBtn = document.getElementById('addChatIdBtn');
-  const chatIdsDiv = document.getElementById('chatIdsList');
-  const saveBtn = document.getElementById('saveSettingsBtn');
-  const connStatus = document.getElementById('connStatus');
+  const chatIdsListDiv = document.getElementById('chatIdsList');
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  const connStatusSpan = document.getElementById('connStatus');
   const onlineIndicator = document.getElementById('onlineIndicator');
   const lastCommandSpan = document.getElementById('lastCommand');
   const lastUserSpan = document.getElementById('lastUser');
   const lastResponseSpan = document.getElementById('lastResponse');
   const authCountSpan = document.getElementById('authCount');
-  const logDiv = document.getElementById('commandLog');
+  const permSummarySpan = document.getElementById('permSummary');
+  const commandLogDiv = document.getElementById('commandLog');
   const clearHistoryBtn = document.getElementById('clearHistoryBtn');
   const getChatIdBtn = document.getElementById('getChatIdBtn');
   const testBotBtn = document.getElementById('testBotBtn');
-  const pollingSelect = document.getElementById('pollingInterval');
+  const pollingIntervalSelect = document.getElementById('pollingIntervalSelect');
   const installBanner = document.getElementById('installBanner');
   const installBtn = document.getElementById('installBtn');
-
+  
   // Permission elements
   const locStatus = document.getElementById('locStatus');
   const camStatus = document.getElementById('camStatus');
@@ -429,25 +412,38 @@
   const grantCamBtn = document.getElementById('grantCamBtn');
   const grantMicBtn = document.getElementById('grantMicBtn');
 
-  // ========== HELPERS ==========
-  function showToast(msg) {
+  // ========== HELPER FUNCTIONS ==========
+  function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.textContent = msg;
+    toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
   }
 
-  function addLog(msg, type = 'info') {
+  function addLog(message, type = 'info') {
     const time = new Date().toLocaleTimeString();
-    history.unshift({ time, msg, type });
-    if (history.length > 100) history.pop();
-    logDiv.innerHTML = history.map(e => `<div class="log-entry ${e.type}">[${e.time}] ${e.msg}</div>`).join('');
-    if (history.length === 0) logDiv.innerHTML = '✨ No logs yet.';
+    commandHistory.unshift({ time, text: message, type });
+    if (commandHistory.length > 100) commandHistory.pop();
+    
+    commandLogDiv.innerHTML = commandHistory.map(e => 
+      `<div class="log-entry ${e.type}">[${e.time}] ${e.text}</div>`
+    ).join('');
+    
+    if (commandHistory.length === 0) {
+      commandLogDiv.innerHTML = '✨ No logs yet.';
+    }
   }
 
-  function updateUI() {
+  function updateDashboard() {
     authCountSpan.innerText = settings.authorizedChatIds.length;
+    
+    const permList = [];
+    if (permissions.location) permList.push('📍 Location');
+    if (permissions.camera) permList.push('📷 Camera');
+    if (permissions.microphone) permList.push('🎙️ Mic');
+    permSummarySpan.innerText = permList.length ? permList.join(', ') : 'None';
+    
     locStatus.innerText = permissions.location ? 'Granted ✓' : 'Not Granted';
     locStatus.className = permissions.location ? 'status-badge status-granted' : 'status-badge status-denied';
     camStatus.innerText = permissions.camera ? 'Granted ✓' : 'Not Granted';
@@ -457,190 +453,238 @@
   }
 
   function renderChatIds() {
+    if (!chatIdsListDiv) return;
+    
     if (settings.authorizedChatIds.length === 0) {
-      chatIdsDiv.innerHTML = '<div class="info-text">No authorized users yet.</div>';
+      chatIdsListDiv.innerHTML = '<div class="info-text">No authorized users yet. Add a Chat ID above.</div>';
       return;
     }
-    chatIdsDiv.innerHTML = settings.authorizedChatIds.map(id => `
-      <div class="chat-tag">👤 ${id}<button class="remove-chat" data-id="${id}">✖</button></div>
+    
+    chatIdsListDiv.innerHTML = settings.authorizedChatIds.map(id => `
+      <div class="chat-tag">
+        👤 ${id}
+        <button class="remove-chat" data-id="${id}">✖</button>
+      </div>
     `).join('');
+    
     document.querySelectorAll('.remove-chat').forEach(btn => {
-      btn.onclick = () => {
-        const id = btn.dataset.id;
-        settings.authorizedChatIds = settings.authorizedChatIds.filter(c => String(c) !== String(id));
-        saveSettings();
-        addLog(`❌ Removed ${id}`, 'warn');
-        updateUI();
-      };
+      btn.addEventListener('click', (e) => {
+        const id = btn.getAttribute('data-id');
+        settings.authorizedChatIds = settings.authorizedChatIds.filter(cid => String(cid) !== String(id));
+        saveAllSettings();
+        addLog(`❌ Removed chat ID ${id} from authorized list`, 'warn');
+        updateDashboard();
+      });
     });
   }
 
-  function saveSettings() {
-    localStorage.setItem('fsl_settings', JSON.stringify({
+  // ========== SAVE/LOAD SETTINGS ==========
+  function saveAllSettings() {
+    // Save bot settings
+    localStorage.setItem('familySafetySettings', JSON.stringify({
       botToken: settings.botToken,
       authorizedChatIds: settings.authorizedChatIds,
-      pollingSec: settings.pollingSec
+      pollingIntervalSec: settings.pollingIntervalSec
     }));
-    localStorage.setItem('fsl_permissions', JSON.stringify(permissions));
-    connStatus.innerHTML = settings.botToken?.length > 20 ? '✅ Token set' : '⚠️ Enter token';
+    
+    // Save permissions
+    localStorage.setItem('familySafetyPermissions', JSON.stringify(permissions));
+    
+    // Update UI
+    connStatusSpan.innerHTML = settings.botToken && settings.botToken.length > 20 
+      ? '✅ Bot token configured' 
+      : '⚠️ Enter bot token';
+    
     renderChatIds();
-    updateUI();
-    if (settings.botToken?.length > 20) startPolling();
+    updateDashboard();
+    
+    addLog('💾 Settings saved to localStorage', 'success');
   }
 
-  function loadSettings() {
-    const saved = localStorage.getItem('fsl_settings');
-    if (saved) {
+  function loadAllSettings() {
+    // Load bot settings
+    const savedSettings = localStorage.getItem('familySafetySettings');
+    if (savedSettings) {
       try {
-        const s = JSON.parse(saved);
+        const s = JSON.parse(savedSettings);
         settings.botToken = s.botToken || '';
-        settings.authorizedChatIds = (s.authorizedChatIds || []).map(String);
-        settings.pollingSec = s.pollingSec || 3;
-      } catch(e) {}
+        settings.authorizedChatIds = (s.authorizedChatIds || []).map(id => String(id));
+        settings.pollingIntervalSec = s.pollingIntervalSec || 3;
+      } catch(e) {
+        console.error('Failed to load settings:', e);
+      }
     }
-    const savedPerms = localStorage.getItem('fsl_permissions');
+    
+    // Load permissions
+    const savedPerms = localStorage.getItem('familySafetyPermissions');
     if (savedPerms) {
       try {
         const p = JSON.parse(savedPerms);
-        permissions = p;
-      } catch(e) {}
+        permissions.location = p.location === true;
+        permissions.camera = p.camera === true;
+        permissions.microphone = p.microphone === true;
+      } catch(e) {
+        console.error('Failed to load permissions:', e);
+      }
     }
+    
+    // Apply to UI
     botTokenInput.value = settings.botToken;
-    pollingSelect.value = settings.pollingSec;
+    pollingIntervalSelect.value = settings.pollingIntervalSec;
+    
     renderChatIds();
-    updateUI();
-    connStatus.innerHTML = settings.botToken?.length > 20 ? '✅ Token set' : '⚠️ Enter token';
-    if (settings.botToken?.length > 20) startPolling();
+    updateDashboard();
+    connStatusSpan.innerHTML = settings.botToken && settings.botToken.length > 20 
+      ? '✅ Bot token configured' 
+      : '⚠️ Enter bot token';
+    
+    addLog('📂 Settings loaded from localStorage', 'success');
   }
 
-  // ========== PERMISSION GRANTS ==========
+  // ========== PERMISSION HANDLERS ==========
   async function grantLocation() {
     try {
-      await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+      await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+      });
       permissions.location = true;
-      saveSettings();
-      addLog('✅ Location permission granted', 'success');
-      showToast('Location granted!');
+      saveAllSettings();
+      addLog('✅ Location permission granted and saved', 'success');
+      showToast('📍 Location permission granted!');
     } catch(e) {
       permissions.location = false;
-      saveSettings();
-      addLog('❌ Location denied', 'error');
+      saveAllSettings();
+      addLog('❌ Location permission denied', 'error');
+      showToast('❌ Location permission denied');
     }
-    updateUI();
+    updateDashboard();
   }
-
+  
   async function grantCamera() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       stream.getTracks().forEach(t => t.stop());
       permissions.camera = true;
-      saveSettings();
-      addLog('✅ Camera permission granted', 'success');
-      showToast('Camera granted! You can now take photos.');
+      saveAllSettings();
+      addLog('✅ Camera permission granted and saved', 'success');
+      showToast('📷 Camera permission granted!');
     } catch(e) {
       permissions.camera = false;
-      saveSettings();
-      addLog('❌ Camera denied', 'error');
-      showToast('Camera denied. Photos will not work.');
+      saveAllSettings();
+      addLog('❌ Camera permission denied', 'error');
+      showToast('❌ Camera permission denied');
     }
-    updateUI();
+    updateDashboard();
   }
-
+  
   async function grantMicrophone() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(t => t.stop());
       permissions.microphone = true;
-      saveSettings();
-      addLog('✅ Microphone permission granted', 'success');
-      showToast('Microphone granted! You can now record audio.');
+      saveAllSettings();
+      addLog('✅ Microphone permission granted and saved', 'success');
+      showToast('🎙️ Microphone permission granted!');
     } catch(e) {
       permissions.microphone = false;
-      saveSettings();
-      addLog('❌ Microphone denied', 'error');
-      showToast('Microphone denied. Audio recording will not work.');
+      saveAllSettings();
+      addLog('❌ Microphone permission denied', 'error');
+      showToast('❌ Microphone permission denied');
     }
-    updateUI();
+    updateDashboard();
   }
-
-  grantLocBtn.onclick = grantLocation;
-  grantCamBtn.onclick = grantCamera;
-  grantMicBtn.onclick = grantMicrophone;
 
   // ========== TELEGRAM API ==========
-  async function sendMessage(chatId, text, markdown = false) {
-    if (!settings.botToken) return false;
+  async function sendTelegramMessage(chatId, text, parseMarkdown = false) {
+    if (!settings.botToken || !settings.botToken.length > 20) return false;
     try {
-      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendMessage`, {
+      const url = `https://api.telegram.org/bot${settings.botToken}/sendMessage`;
+      const payload = {
+        chat_id: chatId,
+        text: text,
+        disable_web_page_preview: true
+      };
+      if (parseMarkdown) payload.parse_mode = 'Markdown';
+      
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: text,
-          parse_mode: markdown ? 'Markdown' : undefined,
-          disable_web_page_preview: true
-        })
+        body: JSON.stringify(payload)
       });
-      return res.ok;
-    } catch(e) { return false; }
+      const data = await res.json();
+      return data.ok;
+    } catch(e) {
+      console.error('Send message error:', e);
+      return false;
+    }
   }
 
-  async function sendPhoto(chatId, base64) {
+  async function sendTelegramPhoto(chatId, base64Data) {
     try {
-      const byteString = atob(base64.split(',')[1]);
-      const mime = base64.split(',')[0].split(':')[1].split(';')[0];
+      const byteString = atob(base64Data.split(',')[1]);
+      const mimeString = base64Data.split(',')[0].split(':')[1].split(';')[0];
       const ab = new ArrayBuffer(byteString.length);
       const ia = new Uint8Array(ab);
       for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-      const blob = new Blob([ab], { type: mime });
-      const fd = new FormData();
-      fd.append('chat_id', chatId);
-      fd.append('photo', blob, 'photo.jpg');
-      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendPhoto`, { method: 'POST', body: fd });
-      return res.ok;
-    } catch(e) { return false; }
+      const blob = new Blob([ab], { type: mimeString });
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+      formData.append('photo', blob, 'photo.jpg');
+      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendPhoto`, { method: 'POST', body: formData });
+      const data = await res.json();
+      return data.ok;
+    } catch(e) {
+      console.error('Send photo error:', e);
+      return false;
+    }
   }
 
-  async function sendAudio(chatId, base64) {
+  async function sendTelegramAudio(chatId, base64Data) {
     try {
-      const byteString = atob(base64.split(',')[1]);
+      const byteString = atob(base64Data.split(',')[1]);
       const ab = new ArrayBuffer(byteString.length);
       const ia = new Uint8Array(ab);
       for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
       const blob = new Blob([ab], { type: 'audio/webm' });
-      const fd = new FormData();
-      fd.append('chat_id', chatId);
-      fd.append('audio', blob, 'audio.ogg');
-      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendAudio`, { method: 'POST', body: fd });
-      return res.ok;
-    } catch(e) { return false; }
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+      formData.append('audio', blob, 'audio.ogg');
+      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendAudio`, { method: 'POST', body: formData });
+      const data = await res.json();
+      return data.ok;
+    } catch(e) {
+      console.error('Send audio error:', e);
+      return false;
+    }
   }
 
   // ========== COMMAND HANDLERS ==========
   async function handleLocation(chatId, userName) {
     if (!permissions.location) {
-      await sendMessage(chatId, "❌ Location permission not granted. Open app and click 'Grant' for location.", true);
+      await sendTelegramMessage(chatId, "❌ *Location permission not granted*\n\nPlease open the app and click 'Grant' for location.", true);
       return;
     }
+    
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude } = pos.coords;
-      const mapLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-      await sendMessage(chatId, `📍 *${userName}* location\n\n[Open Map](${mapLink})\n\nLat: ${latitude}\nLng: ${longitude}`, true);
+      const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      const reply = `📍 *${userName} requested location*\n\n🌐 [Open in Google Maps](${mapsLink})\n\n📌 Coordinates:\nLatitude: ${latitude}\nLongitude: ${longitude}`;
+      await sendTelegramMessage(chatId, reply, true);
       lastResponseSpan.innerText = `Location sent to ${userName}`;
       addLog(`📍 Location sent to ${userName}`, 'success');
     }, async () => {
-      await sendMessage(chatId, "❌ Cannot get location. Enable GPS.", true);
+      await sendTelegramMessage(chatId, "❌ *Cannot get location*\n\nPlease enable GPS and try again.", true);
     });
   }
 
   async function handlePhoto(chatId, userName) {
     if (!permissions.camera) {
-      await sendMessage(chatId, "❌ Camera permission not granted. Open app and click 'Grant' for camera.", true);
+      await sendTelegramMessage(chatId, "❌ *Camera permission not granted*\n\nPlease open the app and click 'Grant' for camera.", true);
       return;
     }
     
     addLog(`📷 Taking photo for ${userName}...`, 'info');
-    await sendMessage(chatId, `📷 Taking photo for ${userName}...`, true);
+    await sendTelegramMessage(chatId, `📷 *Taking photo for ${userName}*`, true);
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -660,7 +704,7 @@
       stream.getTracks().forEach(t => t.stop());
       video.remove();
       
-      const success = await sendPhoto(chatId, photoData);
+      const success = await sendTelegramPhoto(chatId, photoData);
       if (success) {
         lastResponseSpan.innerText = `Photo sent to ${userName}`;
         addLog(`📷 Photo sent to ${userName}`, 'success');
@@ -669,38 +713,39 @@
       }
     } catch (err) {
       console.error('Photo error:', err);
-      await sendMessage(chatId, `❌ Failed to take photo: ${err.message}`, true);
+      await sendTelegramMessage(chatId, `❌ *Failed to take photo*\n\n${err.message}`, true);
       addLog(`❌ Photo failed for ${userName}`, 'error');
     }
   }
 
   async function handleAudio(chatId, userName) {
     if (!permissions.microphone) {
-      await sendMessage(chatId, "❌ Microphone permission not granted. Open app and click 'Grant' for microphone.", true);
+      await sendTelegramMessage(chatId, "❌ *Microphone permission not granted*\n\nPlease open the app and click 'Grant' for microphone.", true);
       return;
     }
     
     addLog(`🎤 Recording audio for ${userName}...`, 'info');
-    await sendMessage(chatId, `🎤 Recording audio (max 30s)...`, true);
+    await sendTelegramMessage(chatId, `🎤 *Recording audio for ${userName}* (max 30 seconds)`, true);
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mediaRecorder = new MediaRecorder(stream);
       const chunks = [];
       
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       
+      // Show recording UI
       const div = document.createElement('div');
       div.className = 'recording-ui';
-      div.innerHTML = `<span>🔴 Recording audio...</span><button id="stopAudioBtn">Stop & Send</button>`;
+      div.innerHTML = `<span>🔴 Recording audio for ${userName}...</span><button id="stopAudioBtn" style="background:#dc2626;">⏹️ Stop & Send</button>`;
       document.body.appendChild(div);
       
       const result = await new Promise((resolve) => {
         const timeout = setTimeout(() => {
-          if (recorder.state === 'recording') recorder.stop();
+          if (mediaRecorder.state === 'recording') mediaRecorder.stop();
         }, 30000);
         
-        recorder.onstop = async () => {
+        mediaRecorder.onstop = async () => {
           clearTimeout(timeout);
           div.remove();
           stream.getTracks().forEach(t => t.stop());
@@ -708,47 +753,40 @@
           const blob = new Blob(chunks, { type: 'audio/webm' });
           const reader = new FileReader();
           reader.onloadend = async () => {
-            const success = await sendAudio(chatId, reader.result);
+            const success = await sendTelegramAudio(chatId, reader.result);
             resolve(success);
           };
           reader.readAsDataURL(blob);
         };
         
-        recorder.start(1000);
-        document.getElementById('stopAudioBtn').onclick = () => {
-          if (recorder.state === 'recording') recorder.stop();
-        };
+        mediaRecorder.start(1000);
+        
+        const stopBtn = document.getElementById('stopAudioBtn');
+        if (stopBtn) {
+          stopBtn.onclick = () => {
+            if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+          };
+        }
       });
       
       if (result) {
         lastResponseSpan.innerText = `Audio sent to ${userName}`;
         addLog(`🎤 Audio sent to ${userName}`, 'success');
+        await sendTelegramMessage(chatId, `✅ *Audio recorded and sent to ${userName}!*`, true);
       } else {
         throw new Error('Send failed');
       }
     } catch (err) {
       console.error('Audio error:', err);
-      await sendMessage(chatId, `❌ Failed to record audio: ${err.message}`, true);
+      await sendTelegramMessage(chatId, `❌ *Failed to record audio*\n\n${err.message}`, true);
       addLog(`❌ Audio failed for ${userName}`, 'error');
     }
   }
 
-  async function handleMessage(chatId, userName, text) {
-    const msgText = text.replace(/^message\s*/i, '').trim() || 'Check the app!';
-    const reply = prompt(`📨 Message from ${userName}:\n"${msgText}"\n\nType your reply:`);
-    if (reply && reply.trim()) {
-      await sendMessage(chatId, `📝 Reply to ${userName}: ${reply}`, true);
-      lastResponseSpan.innerText = `Replied to ${userName}`;
-      addLog(`📝 Replied to ${userName}`, 'success');
-    } else {
-      await sendMessage(chatId, `📝 No reply entered`, true);
-    }
-  }
-
-  async function processCommand(text, chatId, userName) {
-    lastCommandSpan.innerText = text;
+  async function processCommand(command, chatId, userName) {
+    lastCommandSpan.innerText = command;
     lastUserSpan.innerText = userName;
-    const cmd = text.trim().toLowerCase();
+    const cmd = command.trim().toLowerCase();
     
     if (cmd === 'location') {
       await handleLocation(chatId, userName);
@@ -757,23 +795,38 @@
     } else if (cmd === 'audio') {
       await handleAudio(chatId, userName);
     } else if (cmd === 'video') {
-      await sendMessage(chatId, `🎥 Video recording coming soon! Use 'photo' or 'audio' for now.`, true);
+      await sendTelegramMessage(chatId, "🎥 *Video recording*\n\nVideo feature coming soon! Use 'photo' or 'audio' for now.", true);
     } else if (cmd.startsWith('message')) {
-      await handleMessage(chatId, userName, text);
+      const msgText = command.replace(/^message\s*/i, '').trim() || 'Check the app!';
+      if (Notification.permission === 'granted') {
+        new Notification('📨 Family Safety Link', { 
+          body: `From ${userName}: ${msgText}`,
+          icon: 'https://cdn-icons-png.flaticon.com/512/2917/2917995.png'
+        });
+      }
+      const reply = prompt(`📨 Message from ${userName}:\n"${msgText}"\n\nType your reply:`);
+      if (reply && reply.trim()) {
+        await sendTelegramMessage(chatId, `📝 *Reply to ${userName}:* ${reply}`, true);
+        lastResponseSpan.innerText = `Replied to ${userName}`;
+        addLog(`📝 Replied to ${userName}`, 'success');
+      } else {
+        await sendTelegramMessage(chatId, `📝 *No reply entered*`, true);
+      }
     } else {
-      const help = `📱 *Commands for ${userName}*\n\n` +
-        `📍 \`location\` - Get current GPS location with map link\n` +
+      const helpText = `📱 *Available Commands for ${userName}*\n\n` +
+        `📍 \`location\` - Get current GPS location with Google Maps link\n` +
         `📷 \`photo\` - Take a photo using camera\n` +
         `🎤 \`audio\` - Record audio (max 30 seconds)\n` +
-        `💬 \`message Your text\` - Send a notification and get reply\n\n` +
-        `*Status:* ✅ Bot is online!`;
-      await sendMessage(chatId, help, true);
+        `💬 \`message Your text\` - Send a notification to the device\n\n` +
+        `*Status:* ✅ Bot is online and ready!`;
+      await sendTelegramMessage(chatId, helpText, true);
     }
   }
 
   // ========== POLLING ==========
-  async function pollUpdates() {
-    if (!settings.botToken || isPolling) return;
+  async function pollTelegramUpdates() {
+    if (!settings.botToken || !settings.botToken.length > 20 || isPolling) return;
+    
     isPolling = true;
     try {
       const url = `https://api.telegram.org/bot${settings.botToken}/getUpdates?offset=${lastUpdateId}&timeout=10`;
@@ -782,27 +835,31 @@
       
       if (data.ok && data.result) {
         for (const update of data.result) {
-          if (update.update_id >= lastUpdateId) lastUpdateId = update.update_id + 1;
+          if (update.update_id >= lastUpdateId) {
+            lastUpdateId = update.update_id + 1;
+          }
           
           const msg = update.message;
           if (msg && msg.text && msg.chat && msg.from) {
             const chatId = String(msg.chat.id);
             const userName = msg.from.first_name || msg.from.username || 'User';
-            const isAuth = settings.authorizedChatIds.some(id => String(id) === chatId);
+            const isAuthorized = settings.authorizedChatIds.some(id => String(id) === chatId);
             
-            if (isAuth && !processedIds.has(update.update_id)) {
-              processedIds.add(update.update_id);
-              addLog(`📨 ${userName}: "${msg.text}"`, 'cmd');
+            if (isAuthorized && !processedUpdateIds.has(update.update_id)) {
+              processedUpdateIds.add(update.update_id);
+              addLog(`📨 Command from ${userName} (${chatId}): "${msg.text}"`, 'cmd');
               await processCommand(msg.text, chatId, userName);
-            } else if (!isAuth) {
-              await sendMessage(chatId, `🔒 *Access Denied*\n\nYour Chat ID: \`${chatId}\`\n\nShare this with the device owner to get authorized.`, true);
+            } else if (!isAuthorized) {
+              await sendTelegramMessage(chatId, 
+                `🔒 *Access Denied*\n\nYour Chat ID: \`${chatId}\`\n\nYou are not authorized to control this device.\n\nShare this ID with the device owner to get access.`, true);
             }
           }
         }
       }
       onlineIndicator.className = 'online-badge';
-      onlineIndicator.innerHTML = '● ONLINE';
+      onlineIndicator.innerHTML = '● ONLINE <span class="polling-indicator"></span>';
     } catch (err) {
+      console.error('Polling error:', err);
       onlineIndicator.className = 'online-badge offline-badge';
       onlineIndicator.innerHTML = '○ OFFLINE';
     } finally {
@@ -811,119 +868,179 @@
   }
 
   function startPolling() {
-    if (pollInterval) clearInterval(pollInterval);
-    const interval = (settings.pollingSec || 3) * 1000;
-    pollInterval = setInterval(pollUpdates, interval);
-    pollUpdates();
-    addLog(`⚡ Polling every ${settings.pollingSec}s`, 'success');
+    if (pollingInterval) clearInterval(pollingInterval);
+    const intervalMs = settings.pollingIntervalSec * 1000;
+    pollingInterval = setInterval(pollTelegramUpdates, intervalMs);
+    pollTelegramUpdates();
+    addLog(`🔄 Polling started: every ${settings.pollingIntervalSec} seconds`, 'success');
   }
 
-  // ========== AUTO DETECT CHAT ID ==========
-  async function getMyChatId() {
-    if (!settings.botToken) {
-      alert('Please enter your Bot Token first and save settings.');
+  // ========== AUTO-DETECT CHAT ID ==========
+  async function autoDetectChatId() {
+    if (!settings.botToken || !settings.botToken.length > 20) {
+      alert('⚠️ Please enter your Bot Token first and click "Save All Settings".');
       return;
     }
-    addLog('🔍 Checking for recent messages...', 'info');
+    
+    addLog('🔍 Checking for recent messages to detect your Chat ID...', 'info');
+    
     try {
-      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/getUpdates`);
+      const url = `https://api.telegram.org/bot${settings.botToken}/getUpdates`;
+      const res = await fetch(url);
       const data = await res.json();
+      
       if (data.ok && data.result && data.result.length > 0) {
         const updates = [...data.result].reverse();
         for (const update of updates) {
           if (update.message && update.message.chat && update.message.from) {
             const chatId = String(update.message.chat.id);
             const name = update.message.from.first_name || 'User';
-            if (confirm(`Found: ${name}\nChat ID: ${chatId}\n\nAdd to authorized list?`)) {
+            
+            if (confirm(`Found user: ${name}\nChat ID: ${chatId}\n\nAdd this Chat ID to authorized list?`)) {
               if (!settings.authorizedChatIds.includes(chatId)) {
                 settings.authorizedChatIds.push(chatId);
-                saveSettings();
-                addLog(`✅ Added ${name} (${chatId})`, 'success');
-                await sendMessage(chatId, `✅ *You are now authorized!* 🎉\n\nSend: location, photo, audio, message`, true);
-                showToast(`Added ${name} to authorized users!`);
+                saveAllSettings();
+                addLog(`✅ Added ${name} (${chatId}) to authorized users`, 'success');
+                await sendTelegramMessage(chatId, 
+                  "✅ *You have been authorized!* 🎉\n\nNow you can use these commands:\n" +
+                  "📍 `location` - Get current GPS location\n" +
+                  "📷 `photo` - Take a photo\n" +
+                  "🎤 `audio` - Record audio (30s)\n" +
+                  "💬 `message Your text` - Send notification", true);
+                showToast(`✅ Added ${name} to authorized users!`);
               } else {
-                alert('Already authorized!');
+                alert('This Chat ID is already authorized!');
               }
             }
             return;
           }
         }
+        alert('No messages found. Send a message to your bot on Telegram first!');
+      } else {
+        alert('No messages found. Send a message to your bot on Telegram first!');
       }
-      alert('No messages found. Send ANY message to your bot on Telegram, then try again.');
     } catch (err) {
-      alert('Error fetching updates. Check your bot token.');
+      console.error('Auto-detect error:', err);
+      alert('❌ Error fetching updates. Check your Bot Token.');
     }
   }
 
-  async function testBot() {
-    if (!settings.botToken) { alert('Set bot token first'); return; }
-    if (settings.authorizedChatIds.length === 0) { alert('Add a chat ID first (click "Get My Chat ID")'); return; }
-    const success = await sendMessage(settings.authorizedChatIds[0], "✅ *Bot is working!*\n\nCommands: location, photo, audio, message", true);
+  async function testBotConnection() {
+    if (!settings.botToken || !settings.botToken.length > 20) {
+      alert('⚠️ Please enter your Bot Token first and click "Save All Settings".');
+      return;
+    }
+    
+    if (settings.authorizedChatIds.length === 0) {
+      alert('⚠️ No authorized Chat IDs yet.\n\nClick "Get My Chat ID" first to add yourself.');
+      return;
+    }
+    
+    const testChatId = settings.authorizedChatIds[0];
+    addLog(`📨 Sending test message to ${testChatId}...`, 'info');
+    
+    const success = await sendTelegramMessage(testChatId, 
+      "✅ *Bot is working!* 🎉\n\nHere are the commands you can use:\n\n" +
+      "📍 `location` - Get current GPS location with Google Maps link\n" +
+      "📷 `photo` - Take a photo\n" +
+      "🎤 `audio` - Record audio (max 30 seconds)\n" +
+      "💬 `message Your text` - Send a notification to the device\n\n" +
+      "Try sending `location` now!", true);
+    
     if (success) {
-      addLog('✅ Test message sent!', 'success');
-      showToast('Test message sent! Check Telegram.');
+      addLog('✅ Test message sent successfully!', 'success');
+      showToast('✅ Test message sent! Check your Telegram bot.');
     } else {
-      alert('Failed to send. Check token.');
+      addLog('❌ Failed to send test message. Check your bot token.', 'error');
+      alert('❌ Failed to send. Check your Bot Token and internet connection.');
     }
   }
 
-  // ========== PWA INSTALL ==========
+  // ========== PWA INSTALLATION ==========
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    installPrompt = e;
+    deferredPrompt = e;
     installBanner.style.display = 'flex';
+    addLog('📱 App can be installed as PWA', 'success');
   });
   
   installBtn.onclick = async () => {
-    if (installPrompt) {
-      installPrompt.prompt();
-      const { outcome } = await installPrompt.userChoice;
-      if (outcome === 'accepted') addLog('✅ App installed!', 'success');
-      installPrompt = null;
-      installBanner.style.display = 'none';
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        addLog('✅ App installed successfully!', 'success');
+        installBanner.style.display = 'none';
+      }
+      deferredPrompt = null;
     } else {
-      alert('Use browser menu: Chrome → ⋮ → Install App');
+      alert('Use browser menu to install:\n\nChrome: ⋮ → Install App\nSafari: Share → Add to Home Screen');
     }
   };
 
   // ========== EVENT LISTENERS ==========
-  saveBtn.onclick = () => {
+  grantLocBtn.onclick = grantLocation;
+  grantCamBtn.onclick = grantCamera;
+  grantMicBtn.onclick = grantMicrophone;
+  
+  saveSettingsBtn.onclick = () => {
     settings.botToken = botTokenInput.value.trim();
-    settings.pollingSec = parseInt(pollingSelect.value);
-    saveSettings();
-    addLog('⚙️ Settings saved', 'success');
-    if (settings.botToken?.length > 20) startPolling();
+    settings.pollingIntervalSec = parseInt(pollingIntervalSelect.value);
+    saveAllSettings();
+    if (settings.botToken && settings.botToken.length > 20) {
+      startPolling();
+    }
+    showToast('✅ Settings saved!');
   };
   
   addChatIdBtn.onclick = () => {
     const newId = newChatIdInput.value.trim();
-    if (newId && !settings.authorizedChatIds.includes(newId)) {
-      settings.authorizedChatIds.push(newId);
-      saveSettings();
-      newChatIdInput.value = '';
-      addLog(`➕ Added ${newId}`, 'success');
-      sendMessage(newId, "✅ *You have been authorized!* 🎉\n\nSend: location, photo, audio, message", true);
-    } else if (newId) {
-      alert('Already in list!');
+    if (newId) {
+      if (!settings.authorizedChatIds.includes(newId)) {
+        settings.authorizedChatIds.push(newId);
+        saveAllSettings();
+        newChatIdInput.value = '';
+        addLog(`➕ Added chat ID ${newId} to authorized list`, 'success');
+        sendTelegramMessage(newId, "✅ *You have been authorized!* 🎉\n\nSend: location, photo, audio, message", true);
+        showToast(`✅ Added ${newId} to authorized users!`);
+      } else {
+        alert('This Chat ID is already in the authorized list!');
+      }
+    } else {
+      alert('Please enter a Chat ID');
     }
   };
   
-  getChatIdBtn.onclick = getMyChatId;
-  testBotBtn.onclick = testBot;
-  clearHistoryBtn.onclick = () => { history = []; addLog('History cleared', 'info'); };
-  
-  if ('Notification' in window) Notification.requestPermission();
+  getChatIdBtn.onclick = autoDetectChatId;
+  testBotBtn.onclick = testBotConnection;
+  clearHistoryBtn.onclick = () => { 
+    commandHistory = []; 
+    commandLogDiv.innerHTML = '✨ History cleared.'; 
+    addLog('History cleared', 'info'); 
+  };
 
-  // ========== INIT ==========
-  loadSettings();
-  addLog('🚀 App ready! Grant permissions first (Location, Camera, Microphone)', 'success');
+  // Request notification permission
+  if ('Notification' in window && Notification.permission !== 'denied') {
+    Notification.requestPermission();
+  }
+
+  // ========== INITIALIZATION ==========
+  loadAllSettings();
   
-  // Check permissions on load and guide user
+  // Start polling if token exists
+  if (settings.botToken && settings.botToken.length > 20) {
+    startPolling();
+  }
+  
+  addLog('🚀 Family Safety Link loaded. Configure your bot token and grant permissions to get started!', 'success');
+  
+  // Show permission reminders
   setTimeout(() => {
     if (!permissions.camera) addLog('⚠️ Click "Grant" next to Camera to enable photos', 'warn');
     if (!permissions.microphone) addLog('⚠️ Click "Grant" next to Microphone to enable audio recording', 'warn');
     if (!permissions.location) addLog('⚠️ Click "Grant" next to Location to enable location sharing', 'warn');
-  }, 1000);
+    if (!settings.botToken || settings.botToken.length < 20) addLog('⚠️ Enter your Telegram Bot Token and click "Save All Settings"', 'warn');
+  }, 1500);
 </script>
 </body>
 </html>
