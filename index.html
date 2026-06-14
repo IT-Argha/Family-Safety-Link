@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Family Safety Link - Fixed Camera/Audio</title>
+  <title>Family Safety Link - Working Version</title>
   <link rel="manifest" href="data:application/manifest+json,{">
   <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2917/2917995.png">
   <meta name="theme-color" content="#0b3b5f">
@@ -91,18 +91,14 @@
       border: 1px solid #1f7a8c;
       color: #1f7a8c;
     }
+    .btn-outline:active { background: #1f7a8c10; }
     .btn-danger {
       background: #dc2626;
     }
     .btn-danger:active { background: #b91c1c; }
-    .btn-install {
-      background: #0b3b5f;
-      margin-top: 0;
+    .btn-success {
+      background: #10b981;
     }
-    .btn-background {
-      background: #8b5cf6;
-    }
-    .btn-background:active { background: #7c3aed; }
     .flex-between {
       display: flex;
       justify-content: space-between;
@@ -142,7 +138,6 @@
       background: #f1f5f9;
       border-radius: 20px;
       padding: 0.8rem 1rem;
-      font-size: 0.9rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -153,6 +148,7 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      font-size: 0.9rem;
     }
     .perm-buttons {
       display: flex;
@@ -191,6 +187,12 @@
       display: flex;
       gap: 1rem;
       justify-content: center;
+      align-items: center;
+    }
+    .recording-ui button {
+      width: auto;
+      padding: 0.5rem 1.2rem;
+      margin: 0;
     }
     .button-group {
       display: flex;
@@ -207,7 +209,6 @@
     }
     .status-granted { background: #10b98120; color: #10b981; }
     .status-denied { background: #ef444420; color: #ef4444; }
-    .status-active { background: #8b5cf620; color: #8b5cf6; }
     .info-text {
       font-size: 0.7rem;
       color: #6b7280;
@@ -220,11 +221,11 @@
       padding: 1rem;
       border-radius: 20px;
       margin-bottom: 1rem;
+      display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 0.5rem;
-      display: flex;
     }
     .install-banner button {
       width: auto;
@@ -241,39 +242,31 @@
       animation: pulse 1.5s infinite;
       margin-left: 5px;
     }
-    .background-badge {
-      background: #8b5cf6;
-      color: white;
-      padding: 0.25rem 0.6rem;
-      border-radius: 40px;
-      font-size: 0.7rem;
-      font-weight: 500;
-      margin-left: 0.5rem;
-    }
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.5; transform: scale(1.2); }
     }
-    .toast-notification {
+    .toast {
       position: fixed;
-      bottom: 80px;
+      bottom: 30px;
       left: 20px;
       right: 20px;
       background: #1e293b;
       color: white;
-      padding: 12px;
+      padding: 12px 20px;
       border-radius: 60px;
       text-align: center;
-      z-index: 1000;
-      animation: slideUp 0.3s ease;
+      z-index: 2000;
+      animation: fadeInUp 0.3s ease;
+      font-size: 0.85rem;
     }
-    @keyframes slideUp {
-      from { transform: translateY(100px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
   <script>
-    // Inline Service Worker Registration
+    // Service Worker Registration
     (function() {
       const manifestData = {
         name: "Family Safety Link",
@@ -284,45 +277,22 @@
         theme_color: "#0b3b5f",
         background_color: "#f4f7fc",
         orientation: "portrait",
-        scope: "/",
         icons: [
-          { src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
-          { src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png", sizes: "192x192", type: "image/png", purpose: "any" }
+          { src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png", sizes: "512x512", type: "image/png" },
+          { src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png", sizes: "192x192", type: "image/png" }
         ]
       };
       
       const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-      const manifestURL = URL.createObjectURL(manifestBlob);
       const manifestLink = document.createElement('link');
       manifestLink.rel = 'manifest';
-      manifestLink.href = manifestURL;
+      manifestLink.href = URL.createObjectURL(manifestBlob);
       document.head.appendChild(manifestLink);
       
-      const serviceWorkerCode = `
-        const CACHE_NAME = 'family-safety-link-v6.0.0';
-        const urlsToCache = ['/', 'https://cdn-icons-png.flaticon.com/512/2917/2917995.png'];
-        
-        self.addEventListener('install', event => {
-          event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)).then(() => self.skipWaiting()));
-        });
-        
-        self.addEventListener('activate', event => {
-          event.waitUntil(caches.keys().then(cacheNames => Promise.all(cacheNames.map(cn => cn !== CACHE_NAME ? caches.delete(cn) : null))).then(() => self.clients.claim()));
-        });
-        
-        self.addEventListener('fetch', event => {
-          event.respondWith(caches.match(event.request).then(response => response || fetch(event.request)));
-        });
-        
-        self.addEventListener('message', event => {
-          if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
-        });
-      `;
-      
+      const swCode = `const CACHE_NAME='fsl-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(['/'])).then(()=>self.skipWaiting())));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
       if ('serviceWorker' in navigator) {
-        const swBlob = new Blob([serviceWorkerCode], { type: 'application/javascript' });
-        const swURL = URL.createObjectURL(swBlob);
-        window.addEventListener('load', () => navigator.serviceWorker.register(swURL).catch(e => console.log('SW failed:', e)));
+        window.addEventListener('load', () => navigator.serviceWorker.register(URL.createObjectURL(swBlob)));
       }
     })();
   </script>
@@ -330,13 +300,13 @@
 <body>
 <div class="container">
   <div id="installBanner" class="install-banner">
-    <span>📱 Install Family Safety Link as App</span>
-    <button id="installNowBtn">Install Now</button>
+    <span>📱 Install Family Safety Link</span>
+    <button id="installBtn">Install</button>
   </div>
   
   <div class="header">
-    <h1>👨‍👩‍👧 Family Safety Link <span class="background-badge" id="bgModeBadge" style="display:none;">🌙 BG Mode</span></h1>
-    <div id="onlineIndicator" class="online-badge">● ONLINE <span class="polling-indicator"></span></div>
+    <h1>👨‍👩‍👧 Family Safety Link</h1>
+    <div id="onlineIndicator" class="online-badge">● ONLINE</div>
   </div>
 
   <div class="card">
@@ -344,64 +314,63 @@
     <div class="settings-group">
       <label>🤖 Telegram Bot Token</label>
       <input type="text" id="botToken" placeholder="1234567890:ABCdefGHIJKLMNOPQRSTUVWXYZ">
-      <div class="status-text" id="connStatus" style="font-size:0.75rem; margin-top:0.3rem;">Not configured</div>
+      <div class="info-text" id="connStatus">Not configured</div>
     </div>
     
     <div class="settings-group">
-      <label>👥 Authorized Users (Chat IDs)</label>
+      <label>👥 Authorized Users</label>
       <div class="flex-between">
-        <input type="text" id="newChatId" placeholder="e.g., 1863260528" style="flex:1">
-        <button id="addChatIdBtn" style="width: auto; background:#10b981;">+ Add User</button>
+        <input type="text" id="newChatId" placeholder="Chat ID" style="flex:1">
+        <button id="addChatIdBtn" style="width: auto; background:#10b981;">+ Add</button>
       </div>
       <div id="chatIdsList" class="chat-ids"></div>
       <div class="button-group">
-        <button id="getChatIdBtn" class="btn-outline">🔍 Auto-detect My Chat ID</button>
+        <button id="getChatIdBtn" class="btn-outline">🔍 Get My Chat ID</button>
         <button id="testBotBtn" class="btn-outline">📨 Test Bot</button>
       </div>
     </div>
     
-    <div class="flex-between" style="margin-bottom: 0.5rem;">
-      <label>⚡ Polling Interval</label>
-      <select id="pollingIntervalSelect" style="width: auto; padding: 0.4rem 0.8rem;">
-        <option value="3">3 seconds</option>
-        <option value="5">5 seconds</option>
-        <option value="10">10 seconds</option>
-        <option value="30">30 seconds</option>
+    <div class="flex-between">
+      <label>⚡ Polling Speed</label>
+      <select id="pollingInterval" style="width: auto; padding: 0.4rem 0.8rem;">
+        <option value="3">3 sec (Fast)</option>
+        <option value="5">5 sec</option>
+        <option value="10">10 sec</option>
+        <option value="30">30 sec</option>
       </select>
     </div>
     
     <div class="button-group">
-      <button id="saveSettingsBtn" style="background:#1f7a8c;">💾 Save Settings</button>
-      <button id="manualInstallBtn" class="btn-install" style="background:#0b3b5f;">📲 Install App</button>
-    </div>
-    
-    <div class="button-group" style="margin-top: 0.5rem;">
-      <button id="enableBackgroundBtn" class="btn-background">🌙 Keep Screen Awake</button>
-      <button id="disableBackgroundBtn" class="btn-outline">⏸️ Allow Sleep</button>
-    </div>
-    
-    <div class="info-text" id="bgStatusText">
-      💡 Keep screen awake prevents phone from sleeping during recording
+      <button id="saveSettingsBtn">💾 Save Settings</button>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-title">🔐 Device Permissions (Must be granted)</div>
+    <div class="card-title">🔐 Permissions (Grant Once)</div>
     <div class="perm-grid">
       <div class="perm-item">
-        <div class="perm-info"><span>📍 Location</span><span id="locPerm" class="status-badge status-denied">Not Granted</span></div>
-        <div class="perm-buttons"><button id="grantLocBtn" class="btn-outline">Grant</button><button id="revokeLocBtn" class="btn-danger">Remove</button></div>
+        <div class="perm-info">📍 Location</div>
+        <div class="perm-buttons">
+          <button id="grantLocBtn" class="btn-outline">Grant</button>
+          <span id="locStatus" class="status-badge status-denied">Not Granted</span>
+        </div>
       </div>
       <div class="perm-item">
-        <div class="perm-info"><span>📷 Camera</span><span id="camPerm" class="status-badge status-denied">Not Granted</span></div>
-        <div class="perm-buttons"><button id="grantCamBtn" class="btn-outline">Grant</button><button id="revokeCamBtn" class="btn-danger">Remove</button></div>
+        <div class="perm-info">📷 Camera</div>
+        <div class="perm-buttons">
+          <button id="grantCamBtn" class="btn-outline">Grant</button>
+          <span id="camStatus" class="status-badge status-denied">Not Granted</span>
+        </div>
       </div>
       <div class="perm-item">
-        <div class="perm-info"><span>🎙️ Microphone</span><span id="micPerm" class="status-badge status-denied">Not Granted</span></div>
-        <div class="perm-buttons"><button id="grantMicBtn" class="btn-outline">Grant</button><button id="revokeMicBtn" class="btn-danger">Remove</button></div>
+        <div class="perm-info">🎙️ Microphone</div>
+        <div class="perm-buttons">
+          <button id="grantMicBtn" class="btn-outline">Grant</button>
+          <span id="micStatus" class="status-badge status-denied">Not Granted</span>
+        </div>
       </div>
     </div>
-    <div class="info-text">⚠️ Grant permissions FIRST, then test commands!</div>
+    <div class="info-text">⚠️ Click Grant for each permission. You only need to do this once!</div>
   </div>
 
   <div class="card">
@@ -409,684 +378,552 @@
     <div style="display: grid; gap: 0.5rem;">
       <div><strong>📨 Last command:</strong> <span id="lastCommand">—</span></div>
       <div><strong>👤 From:</strong> <span id="lastUser">—</span></div>
-      <div><strong>📤 Last response:</strong> <span id="lastResponse">—</span></div>
+      <div><strong>📤 Response:</strong> <span id="lastResponse">—</span></div>
       <div><strong>👥 Authorized:</strong> <span id="authCount">0</span></div>
-      <div><strong>✅ Permissions:</strong> <span id="permSummary">None</span></div>
-      <div><strong>💤 Screen Wake Lock:</strong> <span id="wakeLockStatus" class="status-badge status-denied">Off</span></div>
     </div>
   </div>
 
   <div class="card">
     <div class="card-title">📜 Command History</div>
     <div id="commandLog" class="command-log">✨ Ready. Grant permissions first!</div>
-    <button id="clearHistoryBtn" class="btn-outline" style="margin-top: 0.6rem;">Clear History</button>
+    <button id="clearHistoryBtn" class="btn-outline" style="margin-top: 0.6rem;">Clear</button>
   </div>
 </div>
 
 <script>
-  // ========== GLOBAL STATE ==========
-  let settings = { botToken: '', authorizedChatIds: [], pollingIntervalSec: 3 };
+  // ========== STATE ==========
+  let settings = { botToken: '', authorizedChatIds: [], pollingSec: 3 };
   let permissions = { location: false, camera: false, microphone: false };
-  let lastUpdateSeq = 0;
-  let commandHistory = [];
-  let pollingInterval = null;
+  let lastUpdateId = 0;
+  let history = [];
+  let pollInterval = null;
   let isPolling = false;
-  let processedUpdateIds = new Set();
-  let deferredPrompt = null;
-  
-  // Wake Lock for screen
-  let wakeLock = null;
-  let isWakeLockActive = false;
+  let processedIds = new Set();
+  let installPrompt = null;
 
-  // DOM Elements
+  // DOM elements
   const botTokenInput = document.getElementById('botToken');
   const newChatIdInput = document.getElementById('newChatId');
   const addChatIdBtn = document.getElementById('addChatIdBtn');
-  const chatIdsListDiv = document.getElementById('chatIdsList');
-  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-  const connStatusSpan = document.getElementById('connStatus');
+  const chatIdsDiv = document.getElementById('chatIdsList');
+  const saveBtn = document.getElementById('saveSettingsBtn');
+  const connStatus = document.getElementById('connStatus');
   const onlineIndicator = document.getElementById('onlineIndicator');
   const lastCommandSpan = document.getElementById('lastCommand');
   const lastUserSpan = document.getElementById('lastUser');
   const lastResponseSpan = document.getElementById('lastResponse');
   const authCountSpan = document.getElementById('authCount');
-  const commandLogDiv = document.getElementById('commandLog');
+  const logDiv = document.getElementById('commandLog');
   const clearHistoryBtn = document.getElementById('clearHistoryBtn');
   const getChatIdBtn = document.getElementById('getChatIdBtn');
   const testBotBtn = document.getElementById('testBotBtn');
-  const permSummarySpan = document.getElementById('permSummary');
+  const pollingSelect = document.getElementById('pollingInterval');
   const installBanner = document.getElementById('installBanner');
-  const installNowBtn = document.getElementById('installNowBtn');
-  const manualInstallBtn = document.getElementById('manualInstallBtn');
-  const pwaStatusSpan = document.getElementById('pwaStatus');
-  const pollingIntervalSelect = document.getElementById('pollingIntervalSelect');
-  const wakeLockStatusSpan = document.getElementById('wakeLockStatus');
-  const enableBackgroundBtn = document.getElementById('enableBackgroundBtn');
-  const disableBackgroundBtn = document.getElementById('disableBackgroundBtn');
-  const bgStatusText = document.getElementById('bgStatusText');
+  const installBtn = document.getElementById('installBtn');
 
-  // ========== WAKE LOCK (Keep screen awake for recording) ==========
-  async function requestWakeLock() {
-    if ('wakeLock' in navigator) {
-      try {
-        wakeLock = await navigator.wakeLock.request('screen');
-        isWakeLockActive = true;
-        wakeLock.addEventListener('release', () => {
-          isWakeLockActive = false;
-          wakeLockStatusSpan.innerText = 'Released';
-          wakeLockStatusSpan.className = 'status-badge status-denied';
-          addLog('💤 Screen wake lock released', 'warn');
-        });
-        wakeLockStatusSpan.innerText = 'Active';
-        wakeLockStatusSpan.className = 'status-badge status-active';
-        addLog('✅ Screen wake lock acquired - screen will stay on', 'success');
-        return true;
-      } catch (err) {
-        addLog('⚠️ Screen wake lock not available', 'warn');
-        return false;
-      }
-    }
-    return false;
-  }
-  
-  async function releaseWakeLock() {
-    if (wakeLock) {
-      try {
-        await wakeLock.release();
-        wakeLock = null;
-        isWakeLockActive = false;
-        wakeLockStatusSpan.innerText = 'Off';
-        wakeLockStatusSpan.className = 'status-badge status-denied';
-        addLog('🔓 Screen wake lock released', 'info');
-      } catch(e) {}
-    }
-  }
-  
-  async function enableWakeLock() {
-    await requestWakeLock();
-    bgStatusText.innerHTML = '✅ Screen wake lock ACTIVE! Screen will stay on for recording.';
-    bgStatusText.style.color = '#8b5cf6';
-    localStorage.setItem('wakeLockEnabled', 'true');
-  }
-  
-  async function disableWakeLock() {
-    await releaseWakeLock();
-    bgStatusText.innerHTML = '💡 Enable screen wake lock to prevent phone from sleeping during recording.';
-    bgStatusText.style.color = '#6b7280';
-    localStorage.setItem('wakeLockEnabled', 'false');
-  }
-  
-  async function restoreWakeLock() {
-    if (localStorage.getItem('wakeLockEnabled') === 'true') {
-      await enableWakeLock();
-    }
-  }
+  // Permission elements
+  const locStatus = document.getElementById('locStatus');
+  const camStatus = document.getElementById('camStatus');
+  const micStatus = document.getElementById('micStatus');
+  const grantLocBtn = document.getElementById('grantLocBtn');
+  const grantCamBtn = document.getElementById('grantCamBtn');
+  const grantMicBtn = document.getElementById('grantMicBtn');
 
-  // ========== PWA INSTALLATION ==========
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBanner.style.display = 'flex';
-  });
-  
-  async function installPWA() {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') addLog('✅ PWA installed!', 'success');
-      deferredPrompt = null;
-      installBanner.style.display = 'none';
-    } else {
-      alert('Use browser menu: Chrome → ⋮ → Install App');
-    }
-  }
-  
-  installNowBtn.onclick = installPWA;
-  manualInstallBtn.onclick = installPWA;
-  
-  function updatePWAStatus() {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      pwaStatusSpan.innerText = '✅ Installed';
-      installBanner.style.display = 'none';
-    } else {
-      pwaStatusSpan.innerText = 'Not installed';
-    }
-  }
-  updatePWAStatus();
-
-  // ========== PERMISSIONS ==========
-  async function checkLocation() {
-    if (!navigator.permissions) return false;
-    try { return (await navigator.permissions.query({ name: 'geolocation' })).state === 'granted'; } catch(e) { return false; }
-  }
-  
-  async function checkCamera() {
-    if (!navigator.mediaDevices) return false;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach(t => t.stop());
-      return true;
-    } catch(e) { return false; }
-  }
-  
-  async function checkMicrophone() {
-    if (!navigator.mediaDevices) return false;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(t => t.stop());
-      return true;
-    } catch(e) { return false; }
-  }
-  
-  function savePerms() { localStorage.setItem('familySafetyPermissions', JSON.stringify(permissions)); }
-  function loadPerms() {
-    const saved = localStorage.getItem('familySafetyPermissions');
-    if (saved) { try { const p = JSON.parse(saved); permissions = p; } catch(e){} }
-  }
-  
-  async function verifyPerms() {
-    permissions.location = await checkLocation();
-    permissions.camera = await checkCamera();
-    permissions.microphone = await checkMicrophone();
-    savePerms();
-    updatePermUI();
-  }
-  
-  function updatePermUI() {
-    document.getElementById('locPerm').innerText = permissions.location ? 'Granted ✓' : 'Not Granted';
-    document.getElementById('locPerm').className = permissions.location ? 'status-badge status-granted' : 'status-badge status-denied';
-    document.getElementById('camPerm').innerText = permissions.camera ? 'Granted ✓' : 'Not Granted';
-    document.getElementById('camPerm').className = permissions.camera ? 'status-badge status-granted' : 'status-badge status-denied';
-    document.getElementById('micPerm').innerText = permissions.microphone ? 'Granted ✓' : 'Not Granted';
-    document.getElementById('micPerm').className = permissions.microphone ? 'status-badge status-granted' : 'status-badge status-denied';
-    const list = [];
-    if (permissions.location) list.push('📍');
-    if (permissions.camera) list.push('📷');
-    if (permissions.microphone) list.push('🎙️');
-    permSummarySpan.innerText = list.length ? list.join(' ') : 'None';
-  }
-  
-  async function grantLoc() { 
-    try { 
-      await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej)); 
-      permissions.location=true; 
-      savePerms(); 
-      updatePermUI(); 
-      addLog('✅ Location granted','success');
-      showToast('Location permission granted!');
-    } catch(e){ 
-      permissions.location=false; 
-      updatePermUI(); 
-      addLog('❌ Location denied','error');
-    } 
-  }
-  
-  async function grantCam() { 
-    try { 
-      const s=await navigator.mediaDevices.getUserMedia({video:true}); 
-      s.getTracks().forEach(t=>t.stop()); 
-      permissions.camera=true; 
-      savePerms(); 
-      updatePermUI(); 
-      addLog('✅ Camera granted','success');
-      showToast('Camera permission granted!');
-    } catch(e){ 
-      permissions.camera=false; 
-      updatePermUI(); 
-      addLog('❌ Camera denied - cannot take photos','error');
-    } 
-  }
-  
-  async function grantMic() { 
-    try { 
-      const s=await navigator.mediaDevices.getUserMedia({audio:true}); 
-      s.getTracks().forEach(t=>t.stop()); 
-      permissions.microphone=true; 
-      savePerms(); 
-      updatePermUI(); 
-      addLog('✅ Microphone granted','success');
-      showToast('Microphone permission granted!');
-    } catch(e){ 
-      permissions.microphone=false; 
-      updatePermUI(); 
-      addLog('❌ Microphone denied - cannot record audio','error');
-    } 
-  }
-  
-  function revokeLoc() { permissions.location=false; savePerms(); updatePermUI(); addLog('📍 Location removed','warn'); }
-  function revokeCam() { permissions.camera=false; savePerms(); updatePermUI(); addLog('📷 Camera removed','warn'); }
-  function revokeMic() { permissions.microphone=false; savePerms(); updatePermUI(); addLog('🎙️ Mic removed','warn'); }
-
-  function showToast(message) {
+  // ========== HELPERS ==========
+  function showToast(msg) {
     const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = message;
+    toast.className = 'toast';
+    toast.textContent = msg;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
   }
 
-  function addLog(message, type='info') {
+  function addLog(msg, type = 'info') {
     const time = new Date().toLocaleTimeString();
-    commandHistory.unshift({time, text: message, type});
-    if(commandHistory.length>100) commandHistory.pop();
-    commandLogDiv.innerHTML = commandHistory.map(e=>`<div class="log-entry ${e.type}">[${e.time}] ${e.text}</div>`).join('');
-    if(commandHistory.length===0) commandLogDiv.innerHTML='✨ No logs yet.';
+    history.unshift({ time, msg, type });
+    if (history.length > 100) history.pop();
+    logDiv.innerHTML = history.map(e => `<div class="log-entry ${e.type}">[${e.time}] ${e.msg}</div>`).join('');
+    if (history.length === 0) logDiv.innerHTML = '✨ No logs yet.';
+  }
+
+  function updateUI() {
+    authCountSpan.innerText = settings.authorizedChatIds.length;
+    locStatus.innerText = permissions.location ? 'Granted ✓' : 'Not Granted';
+    locStatus.className = permissions.location ? 'status-badge status-granted' : 'status-badge status-denied';
+    camStatus.innerText = permissions.camera ? 'Granted ✓' : 'Not Granted';
+    camStatus.className = permissions.camera ? 'status-badge status-granted' : 'status-badge status-denied';
+    micStatus.innerText = permissions.microphone ? 'Granted ✓' : 'Not Granted';
+    micStatus.className = permissions.microphone ? 'status-badge status-granted' : 'status-badge status-denied';
   }
 
   function renderChatIds() {
-    if(settings.authorizedChatIds.length===0) { chatIdsListDiv.innerHTML='<div style="color:#94a3b8; padding:0.5rem;">No authorized users.</div>'; return; }
-    chatIdsListDiv.innerHTML = settings.authorizedChatIds.map(id=>`<div class="chat-tag">👤 ${id}<button class="remove-chat" data-id="${id}">✖</button></div>`).join('');
-    document.querySelectorAll('.remove-chat').forEach(btn=>btn.addEventListener('click',()=>{
-      const id=btn.getAttribute('data-id');
-      settings.authorizedChatIds=settings.authorizedChatIds.filter(c=>String(c)!==String(id));
-      persistSettings();
-      addLog(`❌ Removed ${id}`,'warn');
-      authCountSpan.innerText=settings.authorizedChatIds.length;
-    }));
+    if (settings.authorizedChatIds.length === 0) {
+      chatIdsDiv.innerHTML = '<div class="info-text">No authorized users yet.</div>';
+      return;
+    }
+    chatIdsDiv.innerHTML = settings.authorizedChatIds.map(id => `
+      <div class="chat-tag">👤 ${id}<button class="remove-chat" data-id="${id}">✖</button></div>
+    `).join('');
+    document.querySelectorAll('.remove-chat').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        settings.authorizedChatIds = settings.authorizedChatIds.filter(c => String(c) !== String(id));
+        saveSettings();
+        addLog(`❌ Removed ${id}`, 'warn');
+        updateUI();
+      };
+    });
   }
 
-  function persistSettings() {
-    localStorage.setItem('familySafetySettings', JSON.stringify({botToken:settings.botToken, authorizedChatIds:settings.authorizedChatIds, pollingIntervalSec:settings.pollingIntervalSec}));
-    connStatusSpan.innerHTML = settings.botToken?.length>20 ? '✅ Configured' : '⚠️ Enter token';
+  function saveSettings() {
+    localStorage.setItem('fsl_settings', JSON.stringify({
+      botToken: settings.botToken,
+      authorizedChatIds: settings.authorizedChatIds,
+      pollingSec: settings.pollingSec
+    }));
+    localStorage.setItem('fsl_permissions', JSON.stringify(permissions));
+    connStatus.innerHTML = settings.botToken?.length > 20 ? '✅ Token set' : '⚠️ Enter token';
     renderChatIds();
-    authCountSpan.innerText = settings.authorizedChatIds.length;
-    if(settings.botToken?.length>20) startPolling();
+    updateUI();
+    if (settings.botToken?.length > 20) startPolling();
   }
 
   function loadSettings() {
-    const saved = localStorage.getItem('familySafetySettings');
-    if(saved) { try { const s=JSON.parse(saved); settings.botToken=s.botToken||''; settings.authorizedChatIds=(s.authorizedChatIds||[]).map(String); settings.pollingIntervalSec=s.pollingIntervalSec||3; } catch(e){} }
-    botTokenInput.value=settings.botToken;
-    pollingIntervalSelect.value=settings.pollingIntervalSec;
+    const saved = localStorage.getItem('fsl_settings');
+    if (saved) {
+      try {
+        const s = JSON.parse(saved);
+        settings.botToken = s.botToken || '';
+        settings.authorizedChatIds = (s.authorizedChatIds || []).map(String);
+        settings.pollingSec = s.pollingSec || 3;
+      } catch(e) {}
+    }
+    const savedPerms = localStorage.getItem('fsl_permissions');
+    if (savedPerms) {
+      try {
+        const p = JSON.parse(savedPerms);
+        permissions = p;
+      } catch(e) {}
+    }
+    botTokenInput.value = settings.botToken;
+    pollingSelect.value = settings.pollingSec;
     renderChatIds();
-    authCountSpan.innerText=settings.authorizedChatIds.length;
-    connStatusSpan.innerHTML=settings.botToken?.length>20?'✅ Configured':'⚠️ Enter token';
-    if(settings.botToken?.length>20) startPolling();
+    updateUI();
+    connStatus.innerHTML = settings.botToken?.length > 20 ? '✅ Token set' : '⚠️ Enter token';
+    if (settings.botToken?.length > 20) startPolling();
   }
 
-  // ========== TELEGRAM HELPERS ==========
-  async function sendMsg(chatId, text, markdown=false) {
-    if(!settings.botToken) return false;
+  // ========== PERMISSION GRANTS ==========
+  async function grantLocation() {
+    try {
+      await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+      permissions.location = true;
+      saveSettings();
+      addLog('✅ Location permission granted', 'success');
+      showToast('Location granted!');
+    } catch(e) {
+      permissions.location = false;
+      saveSettings();
+      addLog('❌ Location denied', 'error');
+    }
+    updateUI();
+  }
+
+  async function grantCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      permissions.camera = true;
+      saveSettings();
+      addLog('✅ Camera permission granted', 'success');
+      showToast('Camera granted! You can now take photos.');
+    } catch(e) {
+      permissions.camera = false;
+      saveSettings();
+      addLog('❌ Camera denied', 'error');
+      showToast('Camera denied. Photos will not work.');
+    }
+    updateUI();
+  }
+
+  async function grantMicrophone() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      permissions.microphone = true;
+      saveSettings();
+      addLog('✅ Microphone permission granted', 'success');
+      showToast('Microphone granted! You can now record audio.');
+    } catch(e) {
+      permissions.microphone = false;
+      saveSettings();
+      addLog('❌ Microphone denied', 'error');
+      showToast('Microphone denied. Audio recording will not work.');
+    }
+    updateUI();
+  }
+
+  grantLocBtn.onclick = grantLocation;
+  grantCamBtn.onclick = grantCamera;
+  grantMicBtn.onclick = grantMicrophone;
+
+  // ========== TELEGRAM API ==========
+  async function sendMessage(chatId, text, markdown = false) {
+    if (!settings.botToken) return false;
     try {
       const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendMessage`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({chat_id:chatId, text, disable_web_page_preview:true, parse_mode:markdown?'Markdown':undefined})
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: text,
+          parse_mode: markdown ? 'Markdown' : undefined,
+          disable_web_page_preview: true
+        })
       });
       return res.ok;
-    } catch(e){ return false; }
-  }
-  
-  async function sendPhoto(chatId, base64) {
-    try {
-      const byteString=atob(base64.split(',')[1]), mime=base64.split(',')[0].split(':')[1].split(';')[0];
-      const ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
-      for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
-      const blob=new Blob([ab],{type:mime}), fd=new FormData();
-      fd.append('chat_id',chatId); fd.append('photo',blob,'photo.jpg');
-      const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendPhoto`,{method:'POST',body:fd});
-      return res.ok;
-    } catch(e){ return false; }
-  }
-  
-  async function sendVideo(chatId, base64) {
-    try {
-      const byteString=atob(base64.split(',')[1]), ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
-      for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
-      const blob=new Blob([ab],{type:'video/mp4'}), fd=new FormData();
-      fd.append('chat_id',chatId); fd.append('video',blob,'video.mp4');
-      const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendVideo`,{method:'POST',body:fd});
-      return res.ok;
-    } catch(e){ return false; }
-  }
-  
-  async function sendAudio(chatId, base64) {
-    try {
-      const byteString=atob(base64.split(',')[1]), ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
-      for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
-      const blob=new Blob([ab],{type:'audio/webm'}), fd=new FormData();
-      fd.append('chat_id',chatId); fd.append('audio',blob,'audio.ogg');
-      const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendAudio`,{method:'POST',body:fd});
-      return res.ok;
-    } catch(e){ return false; }
+    } catch(e) { return false; }
   }
 
-  // ========== COMMAND HANDLERS (Fixed) ==========
+  async function sendPhoto(chatId, base64) {
+    try {
+      const byteString = atob(base64.split(',')[1]);
+      const mime = base64.split(',')[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      const blob = new Blob([ab], { type: mime });
+      const fd = new FormData();
+      fd.append('chat_id', chatId);
+      fd.append('photo', blob, 'photo.jpg');
+      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendPhoto`, { method: 'POST', body: fd });
+      return res.ok;
+    } catch(e) { return false; }
+  }
+
+  async function sendAudio(chatId, base64) {
+    try {
+      const byteString = atob(base64.split(',')[1]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      const blob = new Blob([ab], { type: 'audio/webm' });
+      const fd = new FormData();
+      fd.append('chat_id', chatId);
+      fd.append('audio', blob, 'audio.ogg');
+      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendAudio`, { method: 'POST', body: fd });
+      return res.ok;
+    } catch(e) { return false; }
+  }
+
+  // ========== COMMAND HANDLERS ==========
   async function handleLocation(chatId, userName) {
-    if(!permissions.location) { 
-      await sendMsg(chatId, "❌ Location permission not granted. Click 'Grant' in app.", true); 
-      return; 
+    if (!permissions.location) {
+      await sendMessage(chatId, "❌ Location permission not granted. Open app and click 'Grant' for location.", true);
+      return;
     }
-    navigator.geolocation.getCurrentPosition(async(pos)=>{
-      const {latitude,longitude}=pos.coords;
-      await sendMsg(chatId, `📍 *${userName}* location\nhttps://www.google.com/maps?q=${latitude},${longitude}\n\n${latitude}, ${longitude}`, true);
-      lastResponseSpan.innerText=`Location sent to ${userName}`;
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      const mapLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      await sendMessage(chatId, `📍 *${userName}* location\n\n[Open Map](${mapLink})\n\nLat: ${latitude}\nLng: ${longitude}`, true);
+      lastResponseSpan.innerText = `Location sent to ${userName}`;
       addLog(`📍 Location sent to ${userName}`, 'success');
-    }, async()=>{
-      await sendMsg(chatId, "❌ Cannot get location. Enable GPS.", true);
+    }, async () => {
+      await sendMessage(chatId, "❌ Cannot get location. Enable GPS.", true);
     });
   }
 
   async function handlePhoto(chatId, userName) {
-    if(!permissions.camera) { 
-      await sendMsg(chatId, "❌ Camera permission not granted. Click 'Grant' in app.", true); 
-      return; 
+    if (!permissions.camera) {
+      await sendMessage(chatId, "❌ Camera permission not granted. Open app and click 'Grant' for camera.", true);
+      return;
     }
     
     addLog(`📷 Taking photo for ${userName}...`, 'info');
-    await sendMsg(chatId, `📷 *${userName}* requested photo - capturing...`, true);
+    await sendMessage(chatId, `📷 Taking photo for ${userName}...`, true);
     
     try {
-      // Request camera with specific constraints for better compatibility
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       const video = document.createElement('video');
       video.srcObject = stream;
-      video.setAttribute('playsinline', '');
+      video.setAttribute('playsinline', 'true');
       await video.play();
       
-      // Wait for video to be ready
       await new Promise(r => setTimeout(r, 200));
       
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
       const photoData = canvas.toDataURL('image/jpeg', 0.85);
       
-      // Stop all tracks
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(t => t.stop());
       video.remove();
       
-      // Send photo
       const success = await sendPhoto(chatId, photoData);
       if (success) {
         lastResponseSpan.innerText = `Photo sent to ${userName}`;
         addLog(`📷 Photo sent to ${userName}`, 'success');
-        await sendMsg(chatId, `✅ Photo sent to ${userName}!`, true);
       } else {
         throw new Error('Send failed');
       }
     } catch (err) {
       console.error('Photo error:', err);
-      await sendMsg(chatId, `❌ Failed to capture photo: ${err.message || 'Camera error'}`, true);
+      await sendMessage(chatId, `❌ Failed to take photo: ${err.message}`, true);
       addLog(`❌ Photo failed for ${userName}`, 'error');
     }
   }
 
   async function handleAudio(chatId, userName) {
-    if(!permissions.microphone) { 
-      await sendMsg(chatId, "❌ Microphone permission not granted. Click 'Grant' in app.", true); 
-      return; 
+    if (!permissions.microphone) {
+      await sendMessage(chatId, "❌ Microphone permission not granted. Open app and click 'Grant' for microphone.", true);
+      return;
     }
     
     addLog(`🎤 Recording audio for ${userName}...`, 'info');
-    await sendMsg(chatId, `🎤 *${userName}* requested audio - recording 30 seconds...`, true);
+    await sendMessage(chatId, `🎤 Recording audio (max 30s)...`, true);
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const recorder = new MediaRecorder(stream);
       const chunks = [];
       
-      mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       
-      // Show recording UI
       const div = document.createElement('div');
       div.className = 'recording-ui';
-      div.innerHTML = `<span>🔴 Recording audio for ${userName}...</span><button id="stopAudioBtn" style="background:#dc2626; width:auto;">⏹️ Stop</button>`;
+      div.innerHTML = `<span>🔴 Recording audio...</span><button id="stopAudioBtn">Stop & Send</button>`;
       document.body.appendChild(div);
       
       const result = await new Promise((resolve) => {
-        let timeout = setTimeout(() => {
-          if (mediaRecorder.state === 'recording') mediaRecorder.stop();
-        }, 30000); // 30 seconds max
+        const timeout = setTimeout(() => {
+          if (recorder.state === 'recording') recorder.stop();
+        }, 30000);
         
-        mediaRecorder.onstop = async () => {
+        recorder.onstop = async () => {
           clearTimeout(timeout);
           div.remove();
           stream.getTracks().forEach(t => t.stop());
           
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+          const blob = new Blob(chunks, { type: 'audio/webm' });
           const reader = new FileReader();
           reader.onloadend = async () => {
             const success = await sendAudio(chatId, reader.result);
             resolve(success);
           };
-          reader.readAsDataURL(audioBlob);
+          reader.readAsDataURL(blob);
         };
         
-        mediaRecorder.start(1000);
-        
-        const stopBtn = document.getElementById('stopAudioBtn');
-        if (stopBtn) {
-          stopBtn.onclick = () => {
-            if (mediaRecorder.state === 'recording') mediaRecorder.stop();
-          };
-        }
+        recorder.start(1000);
+        document.getElementById('stopAudioBtn').onclick = () => {
+          if (recorder.state === 'recording') recorder.stop();
+        };
       });
       
       if (result) {
         lastResponseSpan.innerText = `Audio sent to ${userName}`;
         addLog(`🎤 Audio sent to ${userName}`, 'success');
-        await sendMsg(chatId, `✅ Audio recorded and sent!`, true);
       } else {
         throw new Error('Send failed');
       }
     } catch (err) {
       console.error('Audio error:', err);
-      await sendMsg(chatId, `❌ Failed to record audio: ${err.message || 'Microphone error'}`, true);
+      await sendMessage(chatId, `❌ Failed to record audio: ${err.message}`, true);
       addLog(`❌ Audio failed for ${userName}`, 'error');
     }
   }
 
-  async function handleVideo(chatId, userName) {
-    if(!permissions.camera || !permissions.microphone) { 
-      await sendMsg(chatId, "❌ Camera + Microphone required. Grant both in app.", true); 
-      return; 
-    }
-    
-    addLog(`🎥 Recording video for ${userName}...`, 'info');
-    await sendMsg(chatId, `🎥 *${userName}* requested video - recording 30 seconds...`, true);
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      const chunks = [];
-      
-      mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-      
-      const div = document.createElement('div');
-      div.className = 'recording-ui';
-      div.innerHTML = `<span>🔴 Recording video for ${userName}...</span><button id="stopVideoBtn" style="background:#dc2626; width:auto;">⏹️ Stop</button>`;
-      document.body.appendChild(div);
-      
-      const result = await new Promise((resolve) => {
-        let timeout = setTimeout(() => {
-          if (mediaRecorder.state === 'recording') mediaRecorder.stop();
-        }, 30000);
-        
-        mediaRecorder.onstop = async () => {
-          clearTimeout(timeout);
-          div.remove();
-          stream.getTracks().forEach(t => t.stop());
-          
-          const videoBlob = new Blob(chunks, { type: 'video/webm' });
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const success = await sendVideo(chatId, reader.result);
-            resolve(success);
-          };
-          reader.readAsDataURL(videoBlob);
-        };
-        
-        mediaRecorder.start(1000);
-        
-        const stopBtn = document.getElementById('stopVideoBtn');
-        if (stopBtn) {
-          stopBtn.onclick = () => {
-            if (mediaRecorder.state === 'recording') mediaRecorder.stop();
-          };
-        }
-      });
-      
-      if (result) {
-        lastResponseSpan.innerText = `Video sent to ${userName}`;
-        addLog(`🎥 Video sent to ${userName}`, 'success');
-        await sendMsg(chatId, `✅ Video recorded and sent!`, true);
-      } else {
-        throw new Error('Send failed');
-      }
-    } catch (err) {
-      console.error('Video error:', err);
-      await sendMsg(chatId, `❌ Failed to record video: ${err.message || 'Camera/Mic error'}`, true);
-      addLog(`❌ Video failed for ${userName}`, 'error');
+  async function handleMessage(chatId, userName, text) {
+    const msgText = text.replace(/^message\s*/i, '').trim() || 'Check the app!';
+    const reply = prompt(`📨 Message from ${userName}:\n"${msgText}"\n\nType your reply:`);
+    if (reply && reply.trim()) {
+      await sendMessage(chatId, `📝 Reply to ${userName}: ${reply}`, true);
+      lastResponseSpan.innerText = `Replied to ${userName}`;
+      addLog(`📝 Replied to ${userName}`, 'success');
+    } else {
+      await sendMessage(chatId, `📝 No reply entered`, true);
     }
   }
 
-  async function processCommand(cmd, chatId, userName) {
-    lastCommandSpan.innerText = cmd;
+  async function processCommand(text, chatId, userName) {
+    lastCommandSpan.innerText = text;
     lastUserSpan.innerText = userName;
-    const c = cmd.trim().toLowerCase();
+    const cmd = text.trim().toLowerCase();
     
-    if(c === 'location') await handleLocation(chatId, userName);
-    else if(c === 'photo') await handlePhoto(chatId, userName);
-    else if(c === 'audio') await handleAudio(chatId, userName);
-    else if(c === 'video') await handleVideo(chatId, userName);
-    else if(c.startsWith('message')) {
-      const msg = cmd.replace(/^message\s*/i, '').trim() || 'Check app!';
-      const reply = prompt(`📨 Message from ${userName}:\n"${msg}"\n\nReply:`);
-      if(reply?.trim()) await sendMsg(chatId, `📝 Reply to ${userName}: ${reply}`, true);
+    if (cmd === 'location') {
+      await handleLocation(chatId, userName);
+    } else if (cmd === 'photo') {
+      await handlePhoto(chatId, userName);
+    } else if (cmd === 'audio') {
+      await handleAudio(chatId, userName);
+    } else if (cmd === 'video') {
+      await sendMessage(chatId, `🎥 Video recording coming soon! Use 'photo' or 'audio' for now.`, true);
+    } else if (cmd.startsWith('message')) {
+      await handleMessage(chatId, userName, text);
     } else {
-      await sendMsg(chatId, `📱 *Commands:* location, photo, audio, video, message`, true);
+      const help = `📱 *Commands for ${userName}*\n\n` +
+        `📍 \`location\` - Get current GPS location with map link\n` +
+        `📷 \`photo\` - Take a photo using camera\n` +
+        `🎤 \`audio\` - Record audio (max 30 seconds)\n` +
+        `💬 \`message Your text\` - Send a notification and get reply\n\n` +
+        `*Status:* ✅ Bot is online!`;
+      await sendMessage(chatId, help, true);
     }
   }
 
   // ========== POLLING ==========
   async function pollUpdates() {
-    if(!settings.botToken || isPolling) return;
+    if (!settings.botToken || isPolling) return;
     isPolling = true;
     try {
-      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/getUpdates?offset=${lastUpdateSeq}&timeout=5`);
+      const url = `https://api.telegram.org/bot${settings.botToken}/getUpdates?offset=${lastUpdateId}&timeout=10`;
+      const res = await fetch(url);
       const data = await res.json();
-      if(data.ok && data.result) {
-        for(const update of data.result) {
-          if(update.update_id > lastUpdateSeq) lastUpdateSeq = update.update_id;
+      
+      if (data.ok && data.result) {
+        for (const update of data.result) {
+          if (update.update_id >= lastUpdateId) lastUpdateId = update.update_id + 1;
+          
           const msg = update.message;
-          if(msg?.text && msg?.chat && msg?.from) {
+          if (msg && msg.text && msg.chat && msg.from) {
             const chatId = String(msg.chat.id);
             const userName = msg.from.first_name || msg.from.username || 'User';
-            if(settings.authorizedChatIds.some(id=>String(id)===chatId)) {
-              if(!processedUpdateIds.has(update.update_id)) {
-                processedUpdateIds.add(update.update_id);
-                addLog(`📨 ${userName}: "${msg.text}"`, 'cmd');
-                await processCommand(msg.text, chatId, userName);
-              }
-            } else {
-              await sendMsg(chatId, `🔒 *Access Denied ${userName}*\n\nChat ID: \`${chatId}\``, true);
+            const isAuth = settings.authorizedChatIds.some(id => String(id) === chatId);
+            
+            if (isAuth && !processedIds.has(update.update_id)) {
+              processedIds.add(update.update_id);
+              addLog(`📨 ${userName}: "${msg.text}"`, 'cmd');
+              await processCommand(msg.text, chatId, userName);
+            } else if (!isAuth) {
+              await sendMessage(chatId, `🔒 *Access Denied*\n\nYour Chat ID: \`${chatId}\`\n\nShare this with the device owner to get authorized.`, true);
             }
           }
         }
       }
       onlineIndicator.className = 'online-badge';
-      onlineIndicator.innerHTML = '● ONLINE <span class="polling-indicator"></span>';
-    } catch(e) {
+      onlineIndicator.innerHTML = '● ONLINE';
+    } catch (err) {
       onlineIndicator.className = 'online-badge offline-badge';
       onlineIndicator.innerHTML = '○ OFFLINE';
-    } finally { isPolling = false; }
+    } finally {
+      isPolling = false;
+    }
   }
 
   function startPolling() {
-    if(pollingInterval) clearInterval(pollingInterval);
-    pollingInterval = setInterval(pollUpdates, settings.pollingIntervalSec * 1000);
+    if (pollInterval) clearInterval(pollInterval);
+    const interval = (settings.pollingSec || 3) * 1000;
+    pollInterval = setInterval(pollUpdates, interval);
     pollUpdates();
+    addLog(`⚡ Polling every ${settings.pollingSec}s`, 'success');
   }
 
-  // ========== AUTO-DETECT ==========
-  async function autoDetect() {
-    if(!settings.botToken) { alert('Set bot token first'); return; }
+  // ========== AUTO DETECT CHAT ID ==========
+  async function getMyChatId() {
+    if (!settings.botToken) {
+      alert('Please enter your Bot Token first and save settings.');
+      return;
+    }
+    addLog('🔍 Checking for recent messages...', 'info');
     try {
       const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/getUpdates`);
       const data = await res.json();
-      if(data.ok && data.result?.length) {
-        for(const update of data.result.reverse()) {
-          if(update.message?.chat && update.message?.from) {
+      if (data.ok && data.result && data.result.length > 0) {
+        const updates = [...data.result].reverse();
+        for (const update of updates) {
+          if (update.message && update.message.chat && update.message.from) {
             const chatId = String(update.message.chat.id);
             const name = update.message.from.first_name || 'User';
-            if(confirm(`Found: ${name}\nChat ID: ${chatId}\n\nAdd to authorized?`)) {
-              if(!settings.authorizedChatIds.includes(chatId)) {
+            if (confirm(`Found: ${name}\nChat ID: ${chatId}\n\nAdd to authorized list?`)) {
+              if (!settings.authorizedChatIds.includes(chatId)) {
                 settings.authorizedChatIds.push(chatId);
-                persistSettings();
+                saveSettings();
                 addLog(`✅ Added ${name} (${chatId})`, 'success');
-                await sendMsg(chatId, `✅ *Authorized ${name}!* Send: location, photo, audio, video`, true);
+                await sendMessage(chatId, `✅ *You are now authorized!* 🎉\n\nSend: location, photo, audio, message`, true);
+                showToast(`Added ${name} to authorized users!`);
+              } else {
+                alert('Already authorized!');
               }
             }
             return;
           }
         }
       }
-      alert('Send a message to your bot first!');
-    } catch(e){ alert('Error fetching updates'); }
+      alert('No messages found. Send ANY message to your bot on Telegram, then try again.');
+    } catch (err) {
+      alert('Error fetching updates. Check your bot token.');
+    }
   }
 
   async function testBot() {
-    if(!settings.botToken) { alert('Set bot token first'); return; }
-    if(!settings.authorizedChatIds.length) { alert('Add a chat ID first'); return; }
-    await sendMsg(settings.authorizedChatIds[0], "✅ *Bot is working!* 🎉\n\nCommands: location, photo, audio, video, message", true);
-    addLog('✅ Test sent!', 'success');
+    if (!settings.botToken) { alert('Set bot token first'); return; }
+    if (settings.authorizedChatIds.length === 0) { alert('Add a chat ID first (click "Get My Chat ID")'); return; }
+    const success = await sendMessage(settings.authorizedChatIds[0], "✅ *Bot is working!*\n\nCommands: location, photo, audio, message", true);
+    if (success) {
+      addLog('✅ Test message sent!', 'success');
+      showToast('Test message sent! Check Telegram.');
+    } else {
+      alert('Failed to send. Check token.');
+    }
   }
 
+  // ========== PWA INSTALL ==========
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    installBanner.style.display = 'flex';
+  });
+  
+  installBtn.onclick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === 'accepted') addLog('✅ App installed!', 'success');
+      installPrompt = null;
+      installBanner.style.display = 'none';
+    } else {
+      alert('Use browser menu: Chrome → ⋮ → Install App');
+    }
+  };
+
   // ========== EVENT LISTENERS ==========
-  document.getElementById('grantLocBtn').onclick = grantLoc;
-  document.getElementById('grantCamBtn').onclick = grantCam;
-  document.getElementById('grantMicBtn').onclick = grantMic;
-  document.getElementById('revokeLocBtn').onclick = revokeLoc;
-  document.getElementById('revokeCamBtn').onclick = revokeCam;
-  document.getElementById('revokeMicBtn').onclick = revokeMic;
-  
-  enableBackgroundBtn.onclick = enableWakeLock;
-  disableBackgroundBtn.onclick = disableWakeLock;
-  
-  saveSettingsBtn.onclick = () => {
+  saveBtn.onclick = () => {
     settings.botToken = botTokenInput.value.trim();
-    settings.pollingIntervalSec = parseInt(pollingIntervalSelect.value);
-    persistSettings();
-    addLog(`⚙️ Settings saved`, 'success');
-    if(settings.botToken?.length>20) startPolling();
+    settings.pollingSec = parseInt(pollingSelect.value);
+    saveSettings();
+    addLog('⚙️ Settings saved', 'success');
+    if (settings.botToken?.length > 20) startPolling();
   };
   
   addChatIdBtn.onclick = () => {
     const newId = newChatIdInput.value.trim();
-    if(newId && !settings.authorizedChatIds.includes(newId)) {
+    if (newId && !settings.authorizedChatIds.includes(newId)) {
       settings.authorizedChatIds.push(newId);
-      persistSettings();
+      saveSettings();
       newChatIdInput.value = '';
       addLog(`➕ Added ${newId}`, 'success');
-      sendMsg(newId, "✅ *Authorized!* 🎉\n\nSend: location, photo, audio, video", true);
+      sendMessage(newId, "✅ *You have been authorized!* 🎉\n\nSend: location, photo, audio, message", true);
+    } else if (newId) {
+      alert('Already in list!');
     }
   };
   
-  getChatIdBtn.onclick = autoDetect;
+  getChatIdBtn.onclick = getMyChatId;
   testBotBtn.onclick = testBot;
-  clearHistoryBtn.onclick = () => { commandHistory = []; addLog('History cleared', 'info'); };
+  clearHistoryBtn.onclick = () => { history = []; addLog('History cleared', 'info'); };
+  
+  if ('Notification' in window) Notification.requestPermission();
 
-  if('Notification' in window) Notification.requestPermission();
-
-  // Initialize
-  loadPerms();
+  // ========== INIT ==========
   loadSettings();
-  restoreWakeLock();
-  verifyPerms().then(() => {
-    addLog('🚀 App ready! Grant permissions first, then test commands.', 'success');
-    if(!permissions.camera) addLog('⚠️ Click "Grant" next to Camera to enable photos', 'warn');
-    if(!permissions.microphone) addLog('⚠️ Click "Grant" next to Microphone to enable audio', 'warn');
-  });
+  addLog('🚀 App ready! Grant permissions first (Location, Camera, Microphone)', 'success');
+  
+  // Check permissions on load and guide user
+  setTimeout(() => {
+    if (!permissions.camera) addLog('⚠️ Click "Grant" next to Camera to enable photos', 'warn');
+    if (!permissions.microphone) addLog('⚠️ Click "Grant" next to Microphone to enable audio recording', 'warn');
+    if (!permissions.location) addLog('⚠️ Click "Grant" next to Location to enable location sharing', 'warn');
+  }, 1000);
 </script>
 </body>
 </html>
